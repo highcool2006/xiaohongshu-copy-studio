@@ -16,10 +16,12 @@ import type { Dispatch, ReactNode } from 'react'
 import {
   collectGenerateInputFieldErrors,
   validateGenerateInput,
+  validateReferenceText,
 } from '../../shared/validation'
 import { requestCompliance } from '../api/compliance'
 import { requestGenerate } from '../api/generate'
 import type { FrontendApiError } from '../api/http'
+import { requestReferenceAnalyze } from '../api/referenceAnalyze'
 import { requestRewrite } from '../api/rewrite'
 import { requestScore } from '../api/score'
 import { requestTitleVariants } from '../api/titleVariants'
@@ -38,6 +40,8 @@ const BACKEND_FIELD_TO_FORM_FIELD: Partial<Record<string, FormField>> = {
   selling_points: 'sellingPoints',
   styles: 'styles',
   count: 'count',
+  // 参考文案超长等错误回落到参考文案输入框（generate 与 reference/analyze 共用同一字段名）
+  reference_text: 'referenceText',
 }
 
 const COPY_FEEDBACK_MS = 2000
@@ -72,6 +76,8 @@ interface AppContextValue {
   submitScore: (localId: string) => Promise<void>
   submitComplianceCheck: (localId: string) => Promise<void>
   submitTitleVariants: (localId: string) => Promise<void>
+  /** 分析参考文案（用户主动触发；一次分析 = 一次请求） */
+  submitReferenceAnalyze: () => Promise<void>
   retryCard: (localId: string) => Promise<void>
   copyNote: (localId: string) => Promise<void>
   /** 批量复制选中项（未选中任何项时复制当前筛选结果） */
@@ -280,6 +286,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state.cards, state.notes, profile],
   )
 
+  /* ---------- 参考文案分析（用户主动触发，与生成流程相互独立） ---------- */
+
+  const submitReferenceAnalyze = useCallback(async (): Promise<void> => {
+    // 1. 用共享校验器检查输入（与后端 validateReferenceText 同一套规则）
+    const validated = validateReferenceText(profile.referenceText)
+    if (!validated.ok) {
+      // 复用既有的 VALIDATION_FAILED：把错误落到参考文案输入框
+      dispatch({ type: 'VALIDATION_FAILED', errors: { referenceText: validated.error.message } })
+      return
+    }
+
+    // 2. 一次点击 = 一次请求（不做自动分析、不做 debounce）
+    dispatch({ type: 'REFERENCE_ANALYZE_START' })
+    const result = await requestReferenceAnalyze({ reference_text: validated.value })
+
+    if (result.ok) {
+      dispatch({ type: 'REFERENCE_ANALYZE_SUCCESS', analysis: result.value })
+      return
+    }
+    // 失败：保留输入、保留旧分析，只显示错误
+    dispatch({ type: 'REFERENCE_ANALYZE_ERROR', message: result.error.message })
+  }, [profile.referenceText])
+
   const retryCard = useCallback(
     async (localId: string): Promise<void> => {
       const action = state.cards[localId]?.errorAction
@@ -349,6 +378,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       submitScore,
       submitComplianceCheck,
       submitTitleVariants,
+      submitReferenceAnalyze,
       retryCard,
       copyNote,
       copySelected,
@@ -361,6 +391,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       submitScore,
       submitComplianceCheck,
       submitTitleVariants,
+      submitReferenceAnalyze,
       retryCard,
       copyNote,
       copySelected,

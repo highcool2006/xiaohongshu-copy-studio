@@ -23,6 +23,7 @@ import { minCountForStyles } from '../../shared/validation'
 import { useApp } from '../state/AppProvider'
 import { parseSellingPoints } from '../state/appState'
 import type { FormField } from '../state/appState'
+import { ReferencePanel } from './ReferencePanel'
 
 const FIELD_ORDER: FormField[] = ['product', 'sellingPoints', 'styles', 'count']
 
@@ -37,9 +38,18 @@ const STYLE_DESCRIPTIONS: Record<Style, string> = {
 }
 
 export function SetupPanel() {
-  const { state, dispatch, submitGenerate } = useApp()
-  const { profile, errors, batch } = state
+  const { state, dispatch, submitGenerate, submitReferenceAnalyze } = useApp()
+  const {
+    profile,
+    errors,
+    batch,
+    referenceAnalysis,
+    referenceAnalysisLoading,
+    referenceAnalysisError,
+  } = state
   const isLoading = batch.status === 'loading'
+  /** 没有参考文案内容时不允许触发分析（按钮 disabled） */
+  const hasNoReferenceText = profile.referenceText.trim().length === 0
 
   const [showExtra, setShowExtra] = useState(false)
   const [showReference, setShowReference] = useState(false)
@@ -426,12 +436,38 @@ export function SetupPanel() {
               <strong>不会复制其中的句子、故事或具体事实</strong>。
             </p>
             <textarea
-              className="control control-area control-mt"
+              className={
+                errors.referenceText ? 'control control-area control-mt control-invalid' : 'control control-area control-mt'
+              }
               rows={5}
               value={profile.referenceText}
               placeholder="粘贴参考文案原文……"
-              onChange={(event) => dispatch({ type: 'SET_REFERENCE_TEXT', value: event.target.value })}
+              onChange={(event) => {
+                dispatch({ type: 'SET_REFERENCE_TEXT', value: event.target.value })
+                dispatch({ type: 'CLEAR_FIELD_ERROR', field: 'referenceText' })
+              }}
             />
+            {errors.referenceText && <p className="field-error">{errors.referenceText}</p>}
+
+            {/* 分析入口：用户主动触发，一次点击 = 一次请求 */}
+            <div className="ref-actions">
+              <button
+                type="button"
+                className="card-button"
+                disabled={hasNoReferenceText || referenceAnalysisLoading}
+                onClick={() => void submitReferenceAnalyze()}
+              >
+                {referenceAnalysisLoading ? '分析中…' : '分析这篇参考文案'}
+              </button>
+            </div>
+
+            {referenceAnalysisError !== null && (
+              <p className="ref-error" role="alert">
+                {referenceAnalysisError}
+              </p>
+            )}
+
+            {referenceAnalysis !== null && <ReferencePanel analysis={referenceAnalysis} />}
           </>
         )}
       </div>

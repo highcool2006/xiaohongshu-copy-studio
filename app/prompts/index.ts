@@ -9,6 +9,7 @@
 
 export * from './compliance.js'
 export * from './generate.js'
+export * from './reference.js'
 export * from './rewrite.js'
 export * from './score.js'
 export * from './shared.js'

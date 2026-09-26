@@ -16,6 +16,7 @@ import type {
   ContentStrategy,
   Information,
   Note,
+  ReferenceAnalysis,
   Score,
   TitleVariant,
 } from '../../shared/types'
@@ -29,8 +30,13 @@ export interface NoteWithId extends Note {
   localId: string
 }
 
-/** 表单字段名（与 collectGenerateInputFieldErrors 的键一致） */
-export type FormField = 'product' | 'sellingPoints' | 'styles' | 'count'
+/**
+ * 表单字段名。
+ *
+ * 前四项与 collectGenerateInputFieldErrors 的键一致（generate 的行内错误）；
+ * `referenceText` 用于参考文案区自身的校验错误（例如未粘贴内容就点分析）。
+ */
+export type FormField = 'product' | 'sellingPoints' | 'styles' | 'count' | 'referenceText'
 
 export type CardView = 'display' | 'edit' | 'rewrite'
 export type CardStatus = 'idle' | 'rewriting' | 'scoring' | 'checking' | 'variants'
@@ -104,6 +110,16 @@ export interface AppState {
   information: Information | null
   /** 本次生成的内容策略（含角度与多样性报告） */
   strategy: ContentStrategy | null
+  /**
+   * 参考文案分析结果（用户主动触发）。
+   *
+   * ⚠️ 仅用于展示：**不回灌 generate**，也不参与任何生成逻辑。
+   * 分析失败时不清空已有结果（保留上一次的有效分析并同时显示错误）。
+   */
+  referenceAnalysis: ReferenceAnalysis | null
+  referenceAnalysisLoading: boolean
+  /** 面向用户的错误文案（不进入 API 契约，故用 string 而非 FrontendApiError） */
+  referenceAnalysisError: string | null
   notes: NoteWithId[]
   cards: Record<string, CardState>
   /** 结果区排序与筛选（仅存用户选择；排序结果是派生值） */
@@ -134,6 +150,9 @@ export const initialAppState: AppState = {
   batch: { status: 'idle', error: null, durationMs: null },
   information: null,
   strategy: null,
+  referenceAnalysis: null,
+  referenceAnalysisLoading: false,
+  referenceAnalysisError: null,
   notes: [],
   cards: {},
   sort: 'newest',
@@ -202,6 +221,10 @@ export type AppAction =
   | { type: 'TITLE_VARIANTS_SUCCESS'; localId: string; variants: TitleVariant[] }
   | { type: 'TITLE_VARIANTS_FAILURE'; localId: string; error: FrontendApiError }
   | { type: 'APPLY_TITLE_VARIANT'; localId: string; title: string }
+  // 参考文案分析（用户主动触发；一次分析 = 一次请求）
+  | { type: 'REFERENCE_ANALYZE_START' }
+  | { type: 'REFERENCE_ANALYZE_SUCCESS'; analysis: ReferenceAnalysis }
+  | { type: 'REFERENCE_ANALYZE_ERROR'; message: string }
   // 复制反馈
   | { type: 'SET_COPY_FEEDBACK'; localId: string; value: 'copied' | 'failed' }
   | { type: 'RESET_COPY_FEEDBACK'; localId: string }
@@ -496,6 +519,32 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       // 改标题不改变正文质量评价，但标题变了 → 评分标记为可能过时
       return patchCard(next, action.localId, { scoreStale: true, titleVariants: null })
     }
+
+    /* ---------- 参考文案分析 ---------- */
+    case 'REFERENCE_ANALYZE_START': {
+      // 开始分析说明输入已通过校验 → 顺手清掉参考文案区的行内错误
+      const nextErrors = { ...state.errors }
+      delete nextErrors.referenceText
+      // 刻意**不清空** referenceAnalysis：分析中仍可看到上一次的结果
+      return {
+        ...state,
+        errors: nextErrors,
+        referenceAnalysisLoading: true,
+        referenceAnalysisError: null,
+      }
+    }
+
+    case 'REFERENCE_ANALYZE_SUCCESS':
+      return {
+        ...state,
+        referenceAnalysisLoading: false,
+        referenceAnalysisError: null,
+        referenceAnalysis: action.analysis,
+      }
+
+    case 'REFERENCE_ANALYZE_ERROR':
+      // 失败时保留旧分析结果，只显示错误（不清空输入，也不影响生成结果）
+      return { ...state, referenceAnalysisLoading: false, referenceAnalysisError: action.message }
 
     /* ---------- 复制反馈 ---------- */
     case 'SET_COPY_FEEDBACK':

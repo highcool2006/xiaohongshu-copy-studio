@@ -27,11 +27,13 @@ import type {
   ComplianceResult,
   ContentStrategy,
   Information,
+  ReferenceAnalysis,
   Score,
 } from '../../shared/types.js'
 import {
   validateCompliance,
   validateNotesResult,
+  validateReferenceAnalysis,
   validateScore,
   validateStrategy,
 } from '../../shared/validation.js'
@@ -290,6 +292,63 @@ export function interpretComplianceText(rawText: string): StructuredComplianceRe
   }
 
   return { ok: true, value: compliance.value }
+}
+
+/* ---------- ReferenceAnalysis（/api/reference/analyze） ---------- */
+
+/** /api/reference/analyze 的结构化产出 */
+export type StructuredReferenceAnalysisResult =
+  | { ok: true; value: ReferenceAnalysis }
+  | { ok: false; failure: StructuredFailure }
+
+/**
+ * 处理参考文案分析的原始文本。
+ *
+ * 与 `processComplianceResult` 同一风格：复用 `parseJsonObject` /
+ * `StructuredFailure` / D8 最多一次重试；只是校验目标不同。
+ *
+ * 注意：本端点**不产出文案**，因此没有 notes 相关的分配校验。
+ */
+export async function processReferenceAnalysisResult(
+  rawText: string,
+  retry: RetryRequester,
+): Promise<StructuredReferenceAnalysisResult> {
+  const first = interpretReferenceAnalysisText(rawText)
+  if (first.ok) {
+    return first
+  }
+
+  // D8：最多重试一次（与其余端点同一策略）
+  const retriedText = await retry(first.failure.retryReason)
+  return interpretReferenceAnalysisText(retriedText)
+}
+
+/** 单次解释：预处理 → 解析 → ReferenceAnalysis 结构校验。不含重试逻辑。 */
+export function interpretReferenceAnalysisText(
+  rawText: string,
+): StructuredReferenceAnalysisResult {
+  const parsed = parseJsonObject(rawText)
+  if (!parsed.ok) {
+    return parsed
+  }
+
+  const analysis = validateReferenceAnalysis(parsed.value.analysis)
+  if (!analysis.ok) {
+    const reason = analysis.error.message
+    return {
+      ok: false,
+      failure: {
+        type: 'SCHEMA_FAILED',
+        retryReason:
+          `${reason}。请严格按输出契约重新给出完整的 analysis 对象：` +
+          '9 个描述字段均为非空字符串且不超过 200 字，learnable_methods 与 do_not_copy 各为 1 ~ 10 条字符串数组。' +
+          '不要复制原文句子，不要输出 Markdown。',
+        detail: reason,
+      },
+    }
+  }
+
+  return { ok: true, value: analysis.value }
 }
 
 /* ---------- 预处理与解析 ---------- */

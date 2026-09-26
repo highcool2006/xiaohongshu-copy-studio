@@ -21,6 +21,7 @@ import type { AiClient } from './ai/client.js'
 import { sendApiError } from './http/api-error.js'
 import { registerComplianceRoute } from './routes/compliance.js'
 import { registerGenerateRoute } from './routes/generate.js'
+import { registerReferenceRoute } from './routes/reference.js'
 import { registerRewriteRoute } from './routes/rewrite.js'
 import { registerScoreRoute } from './routes/score.js'
 
@@ -46,6 +47,7 @@ export function createApp(deps: AppDeps = {}): Express {
   registerRewriteRoute(app, { aiClient: client })
   registerScoreRoute(app, { aiClient: client })
   registerComplianceRoute(app, { aiClient: client })
+  registerReferenceRoute(app, { aiClient: client })
 
   // 生产环境：由 Express 提供 Vite 构建产物
   const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../web')

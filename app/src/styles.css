@@ -118,12 +118,14 @@ body {
 
 /* 统一的细滚动条 */
 .setup::-webkit-scrollbar,
-.workspace-body::-webkit-scrollbar {
+.workspace-body::-webkit-scrollbar,
+.ref-card::-webkit-scrollbar {
   width: 10px;
 }
 
 .setup::-webkit-scrollbar-thumb,
-.workspace-body::-webkit-scrollbar-thumb {
+.workspace-body::-webkit-scrollbar-thumb,
+.ref-card::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: var(--radius-pill);
   background: #e0d8cb;
@@ -131,13 +133,15 @@ body {
 }
 
 .setup::-webkit-scrollbar-thumb:hover,
-.workspace-body::-webkit-scrollbar-thumb:hover {
+.workspace-body::-webkit-scrollbar-thumb:hover,
+.ref-card::-webkit-scrollbar-thumb:hover {
   background: #d3c9b8;
   background-clip: content-box;
 }
 
 .setup::-webkit-scrollbar-track,
-.workspace-body::-webkit-scrollbar-track {
+.workspace-body::-webkit-scrollbar-track,
+.ref-card::-webkit-scrollbar-track {
   background: transparent;
 }
 
@@ -794,6 +798,118 @@ body {
   font-size: 12px;
   font-weight: 400;
   opacity: 0.9;
+}
+
+/* ---------- 参考文案分析卡（Phase 7） ---------- */
+
+/* 分析入口按钮行：次级按钮，不与主 CTA 抢主次 */
+.ref-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  margin-top: var(--gap-3);
+}
+
+.ref-error {
+  margin: 7px 0 0;
+  font-size: 12.5px;
+  color: var(--danger);
+}
+
+/* 分析卡：内容较长时**内部滚动**，不把左栏无限撑高 */
+.ref-card {
+  max-height: 420px;
+  overflow-y: auto;
+  margin-top: var(--gap-3);
+  padding: 14px 14px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.ref-section-title {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.ref-section-title-spaced {
+  margin-top: var(--gap-4);
+  padding-top: var(--gap-3);
+  border-top: 1px solid var(--border-hairline);
+}
+
+/* 9 个方法特征：每项一张紧凑小卡（标签在上、描述在下） */
+.ref-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.ref-field {
+  padding: 8px 10px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+.ref-field-label {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.ref-field-value {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.ref-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ref-list-item {
+  position: relative;
+  padding-left: 14px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.ref-list-item::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+/* 「不要复制的内容」用暖沙色圆点，与「可以借鉴」区分开 */
+.ref-list-warn .ref-list-item::before {
+  background: var(--hint-text);
+}
+
+.ref-note {
+  margin: var(--gap-3) 0 0;
+  padding-top: var(--gap-3);
+  border-top: 1px solid var(--border-hairline);
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--text-faint);
 }
 
 /* ============================================================
