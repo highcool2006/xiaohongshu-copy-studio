@@ -22,8 +22,8 @@ import { describeAllocationMismatch } from '../../shared/allocation.js'
 import { INFORMATION_FALLBACK, INFORMATION_STATUS_VALUES } from '../../shared/constants.js'
 import type { InformationStatus } from '../../shared/constants.js'
 import type { Style } from '../../shared/enums.js'
-import type { Information, Note } from '../../shared/types.js'
-import { validateNotesResult } from '../../shared/validation.js'
+import type { Information, Note, Score } from '../../shared/types.js'
+import { validateNotesResult, validateScore } from '../../shared/validation.js'
 
 /** 结构化处理后的产出（对应成功响应体） */
 export interface StructuredNotes {
@@ -138,6 +138,61 @@ export function interpretNotesText(
       notes: notes.value,
     },
   }
+}
+
+/* ---------- Score（/api/score） ---------- */
+
+/** /api/score 的结构化产出 */
+export type StructuredScoreResult =
+  | { ok: true; value: Score }
+  | { ok: false; failure: StructuredFailure }
+
+/**
+ * 处理 score 的原始文本。
+ *
+ * 与 `processNotesResult` **风格一致、共用同一套底层能力**
+ * （`stripCodeFence` / `parseJsonObject` / `StructuredFailure` 三信息分离 / D8 最多一次重试），
+ * 但**独立成函数**：score 的输出形状（单个 score 对象）与 notes 完全不同，
+ * 不应塞进 Note 的处理函数里。
+ *
+ * 成功 → Score；失败 → PARSE_FAILED 或 SCHEMA_FAILED（此时已用尽重试额度）。
+ * 若 `retry` 自身抛异常，异常向上抛出，由 route 映射为 AI_CALL_FAILED。
+ */
+export async function processScoreResult(
+  rawText: string,
+  retry: RetryRequester,
+): Promise<StructuredScoreResult> {
+  const first = interpretScoreText(rawText)
+  if (first.ok) {
+    return first
+  }
+
+  // D8：最多重试一次（与 notes 路径同一策略）
+  const retriedText = await retry(first.failure.retryReason)
+  return interpretScoreText(retriedText)
+}
+
+/** 单次解释：预处理 → 解析 → Score 结构校验。不包含任何重试逻辑。 */
+export function interpretScoreText(rawText: string): StructuredScoreResult {
+  const parsed = parseJsonObject(rawText)
+  if (!parsed.ok) {
+    return parsed
+  }
+
+  const score = validateScore(parsed.value.score)
+  if (!score.ok) {
+    const reason = score.error.message
+    return {
+      ok: false,
+      failure: {
+        type: 'SCHEMA_FAILED',
+        retryReason: `${reason}。请严格按输出契约重新给出完整的 score 对象：五个维度与 total 均为整数，total 必须等于五项之和。`,
+        detail: reason,
+      },
+    }
+  }
+
+  return { ok: true, value: score.value }
 }
 
 /* ---------- 预处理与解析 ---------- */

@@ -115,7 +115,10 @@ export interface ScoreResponse {
 export type ErrorField =
   | 'product'
   | 'selling_points'
+  /** /api/generate 的所选风格（多个） */
   | 'styles'
+  /** /api/score 的当前风格（单个） */
+  | 'style'
   | 'count'
   | 'target_style'
   | 'current_note'

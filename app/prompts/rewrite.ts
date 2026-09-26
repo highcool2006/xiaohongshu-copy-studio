@@ -41,7 +41,7 @@ const SYSTEM_PROMPT = `${ROLE_HEADER}
 【必须保留】
 1. 保留核心事实与核心卖点，**不得改变产品事实**。
 2. 保留当前文案的内容方向（content_directions），**不得为了迎合新风格而更换内容角度**。
-3. 保留原有话题方向；hashtags 可随目标风格调整措辞。
+3. **重新生成** hashtags：内容必须与当前产品及**重写后的最终文案**相关，话题方向**延续当前文案的内容方向**（content_directions），不得引入无关话题。
 4. ${HASHTAG_RULE_TEXT}
 ${NO_FABRICATION_RULES}
 
@@ -51,7 +51,7 @@ ${NO_FABRICATION_RULES}
 6. "content_directions" 只能取 ${ALLOWED_DIRECTIONS_TEXT}。
 
 【评分】
-7. 重写后必须**重新评分**，不得沿用原分数。
+7. 重写后必须**重新评分**：评分必须针对**重写后的 title / body / style / content_directions** 重新判断，**不得沿用或复制旧分数**。
 8. ${SCORE_POSITION_TEXT}
 9. score 的字段与取值范围如下：
 ${SCORE_CONTRACT_TEXT}

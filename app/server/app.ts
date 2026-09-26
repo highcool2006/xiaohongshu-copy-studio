@@ -20,6 +20,8 @@ import { aiClient } from './ai/client.js'
 import type { AiClient } from './ai/client.js'
 import { sendApiError } from './http/api-error.js'
 import { registerGenerateRoute } from './routes/generate.js'
+import { registerRewriteRoute } from './routes/rewrite.js'
+import { registerScoreRoute } from './routes/score.js'
 
 export interface AppDeps {
   /** 便于测试注入；默认使用真实 AI Client（懒初始化） */
@@ -40,6 +42,8 @@ export function createApp(deps: AppDeps = {}): Express {
 
   // 业务路由
   registerGenerateRoute(app, { aiClient: client })
+  registerRewriteRoute(app, { aiClient: client })
+  registerScoreRoute(app, { aiClient: client })
 
   // 生产环境：由 Express 提供 Vite 构建产物
   const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../web')

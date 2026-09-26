@@ -96,17 +96,17 @@ const SCORE_DIMENSION_LABEL: Record<keyof typeof SCORE_DIMENSION_MAX, string> = 
 export const SCORE_CONTRACT_TEXT = [
   ...Object.entries(SCORE_DIMENSION_MAX).map(
     ([dimension, max]) =>
-      `- "${dimension}"（${SCORE_DIMENSION_LABEL[dimension as keyof typeof SCORE_DIMENSION_MAX]}）：0 ~ ${max} 的数值`,
+      `- "${dimension}"（${SCORE_DIMENSION_LABEL[dimension as keyof typeof SCORE_DIMENSION_MAX]}）：0 ~ ${max} 的**整数**`,
   ),
-  `- "total"（总分）：必须等于上述五个维度之和，范围 0 ~ ${SCORE_TOTAL_MAX}`,
+  `- "total"（总分）：必须等于上述五个维度之和，为 0 ~ ${SCORE_TOTAL_MAX} 的**整数**`,
   '- "strength"（优势）：一句具体的优势，非空字符串',
   '- "improvement"（改进建议）：一句具体的改进建议，非空字符串',
 ].join('\n')
 
 /** score 对象的 JSON 字段清单（由 SCORE_DIMENSION_MAX 生成，键名不会漂移） */
 const SCORE_JSON_FIELDS = Object.keys(SCORE_DIMENSION_MAX)
-  .map((dimension) => `"${dimension}": 数值`)
-  .concat(['"total": 数值', '"strength": "一句具体的优势"', '"improvement": "一句具体的改进建议"'])
+  .map((dimension) => `"${dimension}": 整数`)
+  .concat(['"total": 整数', '"strength": "一句具体的优势"', '"improvement": "一句具体的改进建议"'])
   .join(',\n')
 
 function indent(text: string, spaces: number): string {

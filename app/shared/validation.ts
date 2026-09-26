@@ -265,7 +265,8 @@ export function validateScoreInput(raw: unknown): ValidationResult<ScoreRequest>
     return failure('INVALID_INPUT', MESSAGES.bodyRequired, 'body')
   }
   if (!isStyle(raw.style)) {
-    return failure('INVALID_INPUT', MESSAGES.styleInvalid, 'styles')
+    // /api/score 的字段名是单数 style（与 generate 的 styles 不同）
+    return failure('INVALID_INPUT', MESSAGES.styleInvalid, 'style')
   }
 
   const directions = validateContentDirections(raw.content_directions, 'INVALID_INPUT')
@@ -338,11 +339,11 @@ function validateContentDirections(
 
 /**
  * Score 结构约束：
- *   - 五个维度均在各自区间内（title_attractiveness 0～25、readability 0～25、
+ *   - 五个维度均为**整数**且在各自区间内（title_attractiveness 0～25、readability 0～25、
  *     identification 0～20、style_match 0～15、information_completeness 0～15）
- *   - total 必须等于五项之和
+ *   - total 为整数，必须等于五项之和
  *   - total 范围 0～100
- *   - strength / improvement 为字符串
+ *   - strength / improvement 为非空字符串
  */
 export function validateScore(value: unknown): ValidationResult<Score> {
   if (!isRecord(value)) {
@@ -352,15 +353,20 @@ export function validateScore(value: unknown): ValidationResult<Score> {
   let sum = 0
   for (const [dimension, max] of Object.entries(SCORE_DIMENSION_MAX)) {
     const raw = value[dimension]
-    if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0 || raw > max) {
-      return failure('SCHEMA_FAILED', `评分维度 ${dimension} 超出允许范围（0～${max}）`)
+    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0 || raw > max) {
+      return failure('SCHEMA_FAILED', `评分维度 ${dimension} 必须是 0～${max} 的整数`)
     }
     sum += raw
   }
 
   const total = value.total
-  if (typeof total !== 'number' || !Number.isFinite(total) || total < 0 || total > SCORE_TOTAL_MAX) {
-    return failure('SCHEMA_FAILED', `总分超出允许范围（0～${SCORE_TOTAL_MAX}）`)
+  if (
+    typeof total !== 'number' ||
+    !Number.isInteger(total) ||
+    total < 0 ||
+    total > SCORE_TOTAL_MAX
+  ) {
+    return failure('SCHEMA_FAILED', `总分必须是 0～${SCORE_TOTAL_MAX} 的整数`)
   }
   if (Math.abs(total - sum) > SCORE_SUM_EPSILON) {
     return failure('SCHEMA_FAILED', `总分应等于各维度之和（期望 ${sum}，实际 ${total}）`)
