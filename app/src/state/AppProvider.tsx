@@ -268,6 +268,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       dispatch({ type: 'REQUEST_TITLE_VARIANTS', localId })
+      // 有策略信息时把本篇的创作角度一并传入：变体会贴合「这一篇讲给谁、讲哪一件事」。
+      // 重写后 angle_id 可能与当前策略不再对应，此时 find 返回 undefined → 不传（可选字段）
+      const angle = state.strategy?.angles.find((item) => item.id === note.angle_id)
       const result = await requestTitleVariants({
         title: note.title,
         body: note.body,
@@ -275,6 +278,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         content_directions: note.content_directions,
         product: profile.product,
         selling_points: effectiveSellingPoints(profile),
+        ...(angle === undefined ? {} : { angle }),
       })
 
       if (result.ok) {
@@ -283,7 +287,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'TITLE_VARIANTS_FAILURE', localId, error: result.error })
       }
     },
-    [state.cards, state.notes, profile],
+    [state.cards, state.notes, state.strategy, profile],
   )
 
   /* ---------- 参考文案分析（用户主动触发，与生成流程相互独立） ---------- */

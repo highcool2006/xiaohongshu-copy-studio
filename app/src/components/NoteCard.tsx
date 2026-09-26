@@ -26,6 +26,14 @@ const DIMENSION_LABELS: Record<keyof typeof SCORE_DIMENSION_MAX, string> = {
 
 const RISK_LABELS: Record<string, string> = { low: '低', medium: '中', high: '高' }
 
+/** 标题 A/B 的槽位标签：原标题之外的三项固定为 变体 A / B / C */
+const VARIANT_SLOTS = ['变体 A', '变体 B', '变体 C'] as const
+
+/** 当前生效的那一项高亮（标题可由用户在原稿与各变体之间切换） */
+function variantRowClass(active: boolean): string {
+  return active ? 'variant variant-active' : 'variant'
+}
+
 export function NoteCard({ note }: { note: NoteWithId }) {
   const {
     state,
@@ -47,6 +55,10 @@ export function NoteCard({ note }: { note: NoteWithId }) {
 
   const copyLabel =
     card.copyFeedback === 'copied' ? '已复制 ✓' : card.copyFeedback === 'failed' ? '复制失败' : '复制'
+
+  /** 标题 A/B 的基线标题（可能尚未生成过变体） */
+  const originalTitle = card.originalTitle
+  const usesOriginalTitle = originalTitle !== null && note.title === originalTitle
 
   return (
     <article className="note-card">
@@ -247,26 +259,58 @@ export function NoteCard({ note }: { note: NoteWithId }) {
         </>
       )}
 
-      {/* 标题变体 */}
+      {/* 标题 A/B 测试：原标题 + 3 个变体，可反复切换 */}
       {card.titleVariants && card.titleVariants.length > 0 && (
         <div className="variants">
-          <p className="variants-title">标题变体（AI 判断，不代表平台表现）</p>
-          {card.titleVariants.map((variant) => (
-            <div key={variant.title} className="variant">
+          <p className="variants-title">标题 A/B 测试（AI 判断，不代表平台表现）</p>
+
+          {/* 原标题始终保留，随时可以切回 */}
+          {originalTitle !== null && (
+            <div className={variantRowClass(usesOriginalTitle)}>
               <div className="variant-head">
-                <span className="chip chip-quiet">{variant.type}</span>
-                <span className="variant-title">{variant.title}</span>
-                <button
-                  type="button"
-                  className="card-button card-button-small"
-                  onClick={() => dispatch({ type: 'APPLY_TITLE_VARIANT', localId: note.localId, title: variant.title })}
-                >
-                  采用
-                </button>
+                <span className="variant-slot">原标题</span>
+                {usesOriginalTitle && <span className="variant-current">当前使用</span>}
+                <span className="variant-title">{originalTitle}</span>
+                {!usesOriginalTitle && (
+                  <button
+                    type="button"
+                    className="card-button card-button-small"
+                    onClick={() =>
+                      dispatch({ type: 'APPLY_TITLE_VARIANT', localId: note.localId, title: originalTitle })
+                    }
+                  >
+                    切回
+                  </button>
+                )}
               </div>
-              <p className="variant-analysis">{variant.analysis}</p>
             </div>
-          ))}
+          )}
+
+          {card.titleVariants.map((variant, index) => {
+            const active = note.title === variant.title
+            return (
+              <div key={variant.title} className={variantRowClass(active)}>
+                <div className="variant-head">
+                  <span className="variant-slot">{VARIANT_SLOTS[index] ?? `变体 ${index + 1}`}</span>
+                  <span className="chip chip-quiet">{variant.type}</span>
+                  {active && <span className="variant-current">当前使用</span>}
+                  <span className="variant-title">{variant.title}</span>
+                  {!active && (
+                    <button
+                      type="button"
+                      className="card-button card-button-small"
+                      onClick={() =>
+                        dispatch({ type: 'APPLY_TITLE_VARIANT', localId: note.localId, title: variant.title })
+                      }
+                    >
+                      采用
+                    </button>
+                  )}
+                </div>
+                <p className="variant-analysis">{variant.analysis}</p>
+              </div>
+            )
+          })}
         </div>
       )}
 

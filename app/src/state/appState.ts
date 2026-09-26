@@ -54,6 +54,13 @@ export interface CardState {
   complianceCheck: ComplianceResult | null
   /** 用户主动生成的标题变体 */
   titleVariants: TitleVariant[] | null
+  /**
+   * 标题 A/B 的基线：进入标题优化时的原标题。
+   *
+   * 采用变体后**不清空**，用户可以在「原标题 / 变体 A / B / C」之间反复切换对比。
+   * 内容被重写后失效（REWRITE_SUCCESS 时清空）。
+   */
+  originalTitle: string | null
 }
 
 export function createCardState(): CardState {
@@ -68,6 +75,7 @@ export function createCardState(): CardState {
     copyFeedback: 'idle',
     complianceCheck: null,
     titleVariants: null,
+    originalTitle: null,
   }
 }
 
@@ -440,9 +448,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         scoreStale: false,
         error: null,
         errorAction: null,
-        // 内容变了，之前的检查结果不再适用
+        // 内容变了，之前的检查结果与标题 A/B 基线都不再适用
         complianceCheck: null,
         titleVariants: null,
+        originalTitle: null,
       })
     }
     case 'REWRITE_FAILURE':
@@ -498,9 +507,21 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         errorAction: 'compliance',
       })
 
-    /* ---------- 标题变体 ---------- */
-    case 'REQUEST_TITLE_VARIANTS':
-      return patchCard(state, action.localId, { status: 'variants', error: null, errorAction: null })
+    /* ---------- 标题变体（A/B 对比） ---------- */
+    case 'REQUEST_TITLE_VARIANTS': {
+      const card = state.cards[action.localId]
+      const note = findNote(state, action.localId)
+      if (card === undefined || note === undefined) {
+        return state
+      }
+      return patchCard(state, action.localId, {
+        status: 'variants',
+        error: null,
+        errorAction: null,
+        // 首次进入标题优化时记下原标题作为 A/B 基线；之后重复生成变体不改基线
+        originalTitle: card.originalTitle ?? note.title,
+      })
+    }
     case 'TITLE_VARIANTS_SUCCESS':
       return patchCard(state, action.localId, {
         status: 'idle',
@@ -516,8 +537,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       })
     case 'APPLY_TITLE_VARIANT': {
       const next = patchNote(state, action.localId, (note) => ({ ...note, title: action.title }))
-      // 改标题不改变正文质量评价，但标题变了 → 评分标记为可能过时
-      return patchCard(next, action.localId, { scoreStale: true, titleVariants: null })
+      // 改标题不改变正文质量评价，但标题变了 → 评分标记为可能过时。
+      // **保留**标题变体列表与原标题：A/B 各选项之间可以反复来回切换。
+      return patchCard(next, action.localId, { scoreStale: true })
     }
 
     /* ---------- 参考文案分析 ---------- */

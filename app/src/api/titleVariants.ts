@@ -2,10 +2,13 @@
  * /api/title-variants 的前端调用封装（标题优化，**用户主动触发**）。
  *
  * 一次调用生成 3 个标题变体；不预测"哪个会爆"，只给出切入方式与内容层面的说明。
+ *
+ * ⚠️ 本类型必须与 shared `TitleVariantsRequest` 保持一致：
+ *    `angle` 是可选字段 —— 有创作角度时传入，变体会贴合"这一篇讲给谁、讲哪一件事"。
  */
 
 import type { ContentDirection, Style } from '../../shared/enums'
-import type { TitleVariant } from '../../shared/types'
+import type { ContentAngle, TitleVariant } from '../../shared/types'
 import { postJson, unexpectedError } from './http'
 import type { FrontendApiError } from './http'
 import { isMockEnabled } from './mockMode'
@@ -18,6 +21,8 @@ export interface TitleVariantsPayload {
   content_directions: ContentDirection[]
   product: string
   selling_points: string[]
+  /** 本篇的创作角度（可选）：提供时标题变体应贴合它 */
+  angle?: ContentAngle
 }
 
 export type TitleVariantsApiResult =

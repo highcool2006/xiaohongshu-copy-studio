@@ -19,7 +19,12 @@
 
 import type { Allocation } from '../../shared/allocation.js'
 import { describeAllocationMismatch } from '../../shared/allocation.js'
-import { INFORMATION_FALLBACK, INFORMATION_STATUS_VALUES } from '../../shared/constants.js'
+import {
+  INFORMATION_FALLBACK,
+  INFORMATION_STATUS_VALUES,
+  TITLE_MAX_LENGTH,
+  TITLE_VARIANT_COUNT,
+} from '../../shared/constants.js'
 import type { InformationStatus } from '../../shared/constants.js'
 import type { Style } from '../../shared/enums.js'
 import type {
@@ -29,6 +34,7 @@ import type {
   Information,
   ReferenceAnalysis,
   Score,
+  TitleVariant,
 } from '../../shared/types.js'
 import {
   validateCompliance,
@@ -36,6 +42,7 @@ import {
   validateReferenceAnalysis,
   validateScore,
   validateStrategy,
+  validateTitleVariants,
 } from '../../shared/validation.js'
 
 /** 结构化处理后的产出（对应成功响应体） */
@@ -349,6 +356,58 @@ export function interpretReferenceAnalysisText(
   }
 
   return { ok: true, value: analysis.value }
+}
+
+/* ---------- TitleVariant（/api/title-variants） ---------- */
+
+/** /api/title-variants 的结构化产出 */
+export type StructuredTitleVariantsResult =
+  | { ok: true; value: TitleVariant[] }
+  | { ok: false; failure: StructuredFailure }
+
+/**
+ * 处理标题变体的原始文本。
+ *
+ * 与 `processComplianceResult` 同一风格：复用 `parseJsonObject` /
+ * `StructuredFailure` / D8 最多一次重试；只是校验目标不同。
+ */
+export async function processTitleVariantsResult(
+  rawText: string,
+  retry: RetryRequester,
+): Promise<StructuredTitleVariantsResult> {
+  const first = interpretTitleVariantsText(rawText)
+  if (first.ok) {
+    return first
+  }
+
+  // D8：最多重试一次（与其余端点同一策略）
+  const retriedText = await retry(first.failure.retryReason)
+  return interpretTitleVariantsText(retriedText)
+}
+
+/** 单次解释：预处理 → 解析 → TitleVariant[] 结构校验。不含重试逻辑。 */
+export function interpretTitleVariantsText(rawText: string): StructuredTitleVariantsResult {
+  const parsed = parseJsonObject(rawText)
+  if (!parsed.ok) {
+    return parsed
+  }
+
+  const variants = validateTitleVariants(parsed.value.variants)
+  if (!variants.ok) {
+    const reason = variants.error.message
+    return {
+      ok: false,
+      failure: {
+        type: 'SCHEMA_FAILED',
+        retryReason:
+          `${reason}。请严格按输出契约重新给出完整的 variants 数组：` +
+          `正好 ${TITLE_VARIANT_COUNT} 个对象，每个含非空的 title / type / analysis（title 不超过 ${TITLE_MAX_LENGTH} 字）。`,
+        detail: reason,
+      },
+    }
+  }
+
+  return { ok: true, value: variants.value }
 }
 
 /* ---------- 预处理与解析 ---------- */

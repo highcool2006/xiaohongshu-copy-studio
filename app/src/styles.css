@@ -1962,10 +1962,54 @@ body {
   color: var(--text-muted);
 }
 
+/* 每个对比项：统一内边距 + 负外边距抵消容器 padding ——
+   这样「当前使用」那一项加背景与竖条时，内容不会左右错位 */
+.variant {
+  padding: 7px 9px;
+  margin: 0 -9px;
+  border-radius: var(--radius-xs);
+}
+
 .variant + .variant {
-  margin-top: 9px;
-  padding-top: 9px;
+  margin-top: 7px;
+  padding-top: 10px;
   border-top: 1px solid var(--brand-border);
+}
+
+/* 当前生效的标题：白底浮起 + 左侧品牌竖条（用 inset 阴影，不改变布局） */
+.variant-active {
+  background: #fff;
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+/* A/B 槽位标签：原标题 / 变体 A / B / C */
+.variant-slot {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.variant-active .variant-slot {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.variant-current {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .variant-head {
@@ -1975,7 +2019,11 @@ body {
   gap: var(--gap-2);
 }
 
+/* 标题占据剩余宽度自行换行，按钮固定在行尾（避免长标题把按钮挤到下一行）。
+   basis 必须是 0 而不是 auto：flex-basis: auto 会以内容宽度参与换行判定，
+   长标题仍会把按钮挤到下一行。 */
 .variant-title {
+  flex: 1 1 0;
   min-width: 0;
   font-size: 13.5px;
   font-weight: 600;
