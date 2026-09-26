@@ -22,12 +22,17 @@ import { describeAllocationMismatch } from '../../shared/allocation.js'
 import { INFORMATION_FALLBACK, INFORMATION_STATUS_VALUES } from '../../shared/constants.js'
 import type { InformationStatus } from '../../shared/constants.js'
 import type { Style } from '../../shared/enums.js'
-import type { AiNote, Information, Score } from '../../shared/types.js'
-import { validateNotesResult, validateScore } from '../../shared/validation.js'
+import type { AiNote, ContentStrategy, Information, Score } from '../../shared/types.js'
+import { validateNotesResult, validateScore, validateStrategy } from '../../shared/validation.js'
 
 /** 结构化处理后的产出（对应成功响应体） */
+/** AI 输出的内容策略（diversity_report 由程序补齐） */
+export type AiStrategy = Pick<ContentStrategy, 'summary' | 'target_users' | 'scenarios' | 'angles'>
+
 export interface StructuredNotes {
   information: Information
+  /** 仅 generate 要求；rewrite 没有策略 */
+  strategy?: AiStrategy
   /** AI 原始输出的笔记（id 与 stale 由 route 层补齐） */
   notes: AiNote[]
 }
@@ -56,11 +61,11 @@ export interface StructuredNotesOptions {
   allowedStyles: readonly Style[]
   /** 程序计算的风格分配表 */
   allocation: Allocation
+  /** true 时要求并校验 strategy（generate）；false/缺省时跳过（rewrite） */
+  requireStrategy?: boolean
   /**
-   * 内容策略中的角度 id 集合：每篇的 angle_id 必须能对应上。
-   *
-   * ⚠️ Phase 1 暂时可选：此时 Prompt 尚未产出 strategy/angles（Phase 3/4 才接入）。
-   *    Phase 4 起所有调用点**必须**传入，届时本字段改为必填。
+   * 额外的角度 id 白名单（rewrite 传入原笔记的 angle_id）。
+   * generate 的策略角度 id 由 strategy 自身提供，不需要此项。
    */
   angleIds?: ReadonlySet<string>
 }
@@ -110,10 +115,33 @@ export function interpretNotesText(
     return parsed
   }
 
+  // generate：先校验内容策略，并用它的角度 id 作为 notes 的白名单
+  let strategy: AiStrategy | undefined
+  let angleIds = options.angleIds
+  if (options.requireStrategy === true) {
+    const parsedStrategy = validateStrategy(parsed.value.strategy, {
+      expectedCount: options.expectedCount,
+      allowedStyles: options.allowedStyles,
+    })
+    if (!parsedStrategy.ok) {
+      const reason = parsedStrategy.error.message
+      return {
+        ok: false,
+        failure: {
+          type: 'SCHEMA_FAILED',
+          retryReason: `${reason}。请严格按输出契约重新给出 strategy（含与篇数等量的 angles）。`,
+          detail: reason,
+        },
+      }
+    }
+    strategy = parsedStrategy.value
+    angleIds = new Set(strategy.angles.map((angle) => angle.id))
+  }
+
   const notes = validateNotesResult(parsed.value.notes, {
     expectedCount: options.expectedCount,
     allowedStyles: options.allowedStyles,
-    angleIds: options.angleIds,
+    ...(angleIds === undefined ? {} : { angleIds }),
   })
   if (!notes.ok) {
     const reason = notes.error.message
@@ -144,6 +172,7 @@ export function interpretNotesText(
     ok: true,
     value: {
       information: extractInformation(parsed.value),
+      ...(strategy === undefined ? {} : { strategy }),
       notes: notes.value,
     },
   }

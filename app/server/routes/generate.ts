@@ -14,6 +14,7 @@ import type { Express, Request, Response } from 'express'
 
 import { buildGeneratePrompt, buildRetryUserMessage } from '../../prompts/index.js'
 import { allocateStyles } from '../../shared/allocation.js'
+import { computeDiversityReport } from '../../shared/diversity.js'
 import { validateGenerateInput } from '../../shared/validation.js'
 import type { AiClient } from '../ai/client.js'
 import { processNotesResult } from '../ai/structured.js'
@@ -46,13 +47,14 @@ export function registerGenerateRoute(app: Express, deps: GenerateRouteDeps): vo
       // 4. 第一次调用（AI Client 是唯一出口）
       const rawText = await deps.aiClient.generateText({ system, user })
 
-      // 5. 结构化处理：解析 + Schema 校验 + D8 最多一次重试 + information 提取
+      // 5. 结构化处理：解析 strategy + notes、Schema 校验、D8 最多一次重试
       const result = await processNotesResult(
         rawText,
         {
           expectedCount: input.value.count,
           allowedStyles: input.value.styles,
           allocation,
+          requireStrategy: true,
         },
         (failureReason) =>
           deps.aiClient.generateText({
@@ -67,10 +69,34 @@ export function registerGenerateRoute(app: Express, deps: GenerateRouteDeps): vo
         return
       }
 
-      // 6. 成功响应：严格遵守 { information, notes }，不增加额外字段
+      const { strategy } = result.value
+      if (strategy === undefined) {
+        // requireStrategy 保证不会走到这里；保留兜底以免静默返回残缺响应
+        sendApiError(res, { type: 'SCHEMA_FAILED', message: '生成结果格式异常，请重试或调整输入后重试' })
+        return
+      }
+
+      // 6. 程序补齐 id / stale，并计算多样性报告（确定性逻辑不交给 AI）
+      const idMap = new Map(strategy.angles.map((angle, index) => [angle.id, `angle-${index + 1}`]))
+      const angles = strategy.angles.map((angle, index) => ({ ...angle, id: `angle-${index + 1}` }))
+      const notes = result.value.notes.map((note, index) => ({
+        ...note,
+        id: `note-${index + 1}`,
+        angle_id: idMap.get(note.angle_id) ?? `angle-${index + 1}`,
+        stale: false,
+      }))
+
+      // 7. 成功响应：{ information, strategy, notes }
       res.json({
         information: result.value.information,
-        notes: result.value.notes,
+        strategy: {
+          summary: strategy.summary,
+          target_users: strategy.target_users,
+          scenarios: strategy.scenarios,
+          angles,
+          diversity_report: computeDiversityReport(angles, notes),
+        },
+        notes,
       })
     } catch (error) {
       // AiCallError → AI_CALL_FAILED；其它 → INTERNAL

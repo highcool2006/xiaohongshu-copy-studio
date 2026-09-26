@@ -53,6 +53,7 @@ export function registerRewriteRoute(app: Express, deps: RewriteRouteDeps): void
       const rawText = await deps.aiClient.generateText({ system, user })
 
       // 5. 结构化处理：解析 + Schema 校验 + D8 最多一次重试
+      //    重写没有 strategy；角度归属由**程序**决定（见第 6 步），因此不校验 AI 回填的 angle_id
       const result = await processNotesResult(
         rawText,
         {
@@ -72,8 +73,23 @@ export function registerRewriteRoute(app: Express, deps: RewriteRouteDeps): void
         return
       }
 
-      // 6. 成功响应：{ notes: [note] }，恰好 1 篇，不增加额外字段
-      res.json({ notes: result.value.notes })
+      // 6. 程序补齐 id / stale；角度以请求传入的为准（程序负责 ID 与归属）
+      const note = result.value.notes[0]
+      if (note === undefined) {
+        sendApiError(res, { type: 'SCHEMA_FAILED', message: '生成结果格式异常，请重试或调整输入后重试' })
+        return
+      }
+
+      res.json({
+        notes: [
+          {
+            ...note,
+            id: 'note-1',
+            angle_id: input.value.angle_id ?? note.angle_id,
+            stale: false,
+          },
+        ],
+      })
     } catch (error) {
       sendApiError(res, toApiError(error))
     }
