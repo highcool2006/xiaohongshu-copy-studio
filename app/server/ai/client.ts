@@ -26,8 +26,19 @@ import {
   Anthropic,
 } from '@anthropic-ai/sdk'
 
-/** 单次调用的输出上限（模型服务的硬性参数，MVP 阶段固定） */
-export const AI_MAX_OUTPUT_TOKENS = 8192
+/**
+ * 单次调用的输出上限。
+ *
+ * ⚠️ 这个值必须按**最大一次响应**来定，而不是按单篇文案来定：
+ * V2 的一次 /api/generate 要在同一个响应里产出
+ *   strategy（summary + N 个创作角度）+ N 篇 note（正文 + 评分 + AI 味自检 + 合规自检 + 封面建议）
+ *
+ * 真实 AI 验收实测（6 篇 + 6 种风格）：8192 不够用，表现为两类失败
+ *   - PARSE_FAILED：JSON 在 2318 / 7979 字符处被截断
+ *   - AI_CALL_FAILED：stop_reason=max_tokens，输出预算被 thinking 占满，没有正文
+ * 因此放宽到足以覆盖「6 篇 + 策略 + 全套自检」的实际体量。
+ */
+export const AI_MAX_OUTPUT_TOKENS = 32000
 
 /* ---------- 配置 ---------- */
 
@@ -210,12 +221,24 @@ export function createAiClient(deps: AiClientDeps = {}): AiClient {
 
       let message
       try {
-        message = await client.messages.create({
+        /**
+         * 用流式请求**接收**，再聚合成完整结果。
+         *
+         * 原因：SDK 对非流式请求有输出上限 —— max_tokens 超过约 16k 时直接拒绝：
+         * "Streaming is required for operations that may take longer than 10 minutes"。
+         * 而 V2 一次 generate 要产出「策略 + N 篇正文 + 评分 + AI 味自检 + 合规自检 + 封面建议」，
+         * 6 篇时体量超过该上限。
+         *
+         * 对上层无影响：`finalMessage()` 返回与 `create()` 相同的完整 Message，
+         * 调用方仍然只拿到最终的完整文本（**没有**向前端做流式输出）。
+         */
+        const stream = client.messages.stream({
           model: cfg.model,
           max_tokens: AI_MAX_OUTPUT_TOKENS,
           system: request.system,
           messages: [{ role: 'user', content: request.user }],
         })
+        message = await stream.finalMessage()
       } catch (error) {
         throw normalizeAiError(error)
       }
