@@ -25,6 +25,14 @@ import { requestReferenceAnalyze } from '../api/referenceAnalyze'
 import { requestRewrite } from '../api/rewrite'
 import { requestScore } from '../api/score'
 import { requestTitleVariants } from '../api/titleVariants'
+import {
+  computeAssetId,
+  loadAssets,
+  persistAssets,
+  removeAsset,
+  upsertAsset,
+} from '../lib/assetsStorage'
+import type { SavedAsset } from '../lib/assetsStorage'
 import { buildCopyText } from '../lib/copyText'
 import {
   appReducer,
@@ -78,6 +86,12 @@ interface AppContextValue {
   submitTitleVariants: (localId: string) => Promise<void>
   /** 分析参考文案（用户主动触发；一次分析 = 一次请求） */
   submitReferenceAnalyze: () => Promise<void>
+  /** 把一篇笔记存入资产库（按内容指纹去重：重复保存 = 更新） */
+  saveNoteToAssets: (localId: string) => void
+  /** 该笔记当前内容是否已存入资产库 */
+  isNoteSaved: (localId: string) => boolean
+  /** 从资产库删除一条资产 */
+  deleteAsset: (assetId: string) => void
   retryCard: (localId: string) => Promise<void>
   copyNote: (localId: string) => Promise<void>
   /** 批量复制选中项（未选中任何项时复制当前筛选结果） */
@@ -290,6 +304,85 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state.cards, state.notes, state.strategy, profile],
   )
 
+  /* ---------- 资产库（localStorage 持久化） ---------- */
+
+  // 挂载时读取一次；读取失败会安全降级为空集（见 lib/assetsStorage）
+  useEffect(() => {
+    dispatch({ type: 'ASSETS_LOADED', assets: loadAssets() })
+  }, [])
+
+  /**
+   * 把一篇笔记存入资产库。
+   *
+   * 顺序：先写盘、再同步内存镜像 —— 这样"已保存"的 UI 状态与磁盘一致。
+   * 写盘失败（配额已满 / 隐私模式）不阻断操作，但会在控制台留痕。
+   */
+  const saveNoteToAssets = useCallback(
+    (localId: string): void => {
+      const note = state.notes.find((item) => item.localId === localId)
+      if (note === undefined) {
+        return
+      }
+      const card = state.cards[localId]
+
+      const asset: SavedAsset = {
+        id: computeAssetId(note.style, note.title, note.body),
+        savedAt: new Date().toISOString(),
+        product: {
+          name: profile.product,
+          category: profile.category,
+          selling_points: effectiveSellingPoints(profile),
+          goal: profile.goal,
+        },
+        note: {
+          title: note.title,
+          body: note.body,
+          hashtags: [...note.hashtags],
+          style: note.style,
+          content_directions: [...note.content_directions],
+          score_total: note.score.total,
+          // 用户主动复查过就用复查结果，否则用生成时的自检
+          compliance_risk: (card?.complianceCheck ?? note.compliance).risk_level,
+          ai_ness_risk: note.ai_ness.risk_level,
+        },
+        title_experiment: {
+          original_title: card?.originalTitle ?? null,
+          variants: card?.titleVariants === null || card?.titleVariants === undefined ? [] : [...card.titleVariants],
+        },
+      }
+
+      const persisted = persistAssets(upsertAsset(state.assets, asset))
+      if (!persisted) {
+        console.warn('[资产库] 写入 localStorage 失败：本次保存仅在当前会话内有效')
+      }
+      dispatch({ type: 'ASSET_SAVED', asset })
+    },
+    [state.notes, state.cards, state.assets, profile],
+  )
+
+  const isNoteSaved = useCallback(
+    (localId: string): boolean => {
+      const note = state.notes.find((item) => item.localId === localId)
+      if (note === undefined) {
+        return false
+      }
+      const id = computeAssetId(note.style, note.title, note.body)
+      return state.assets.some((asset) => asset.id === id)
+    },
+    [state.notes, state.assets],
+  )
+
+  const deleteAsset = useCallback(
+    (assetId: string): void => {
+      const persisted = persistAssets(removeAsset(state.assets, assetId))
+      if (!persisted) {
+        console.warn('[资产库] 删除后写入 localStorage 失败：刷新后该资产可能重新出现')
+      }
+      dispatch({ type: 'ASSET_DELETED', assetId })
+    },
+    [state.assets],
+  )
+
   /* ---------- 参考文案分析（用户主动触发，与生成流程相互独立） ---------- */
 
   const submitReferenceAnalyze = useCallback(async (): Promise<void> => {
@@ -383,6 +476,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       submitComplianceCheck,
       submitTitleVariants,
       submitReferenceAnalyze,
+      saveNoteToAssets,
+      isNoteSaved,
+      deleteAsset,
       retryCard,
       copyNote,
       copySelected,
@@ -396,6 +492,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       submitComplianceCheck,
       submitTitleVariants,
       submitReferenceAnalyze,
+      saveNoteToAssets,
+      isNoteSaved,
+      deleteAsset,
       retryCard,
       copyNote,
       copySelected,

@@ -11,6 +11,7 @@
 import { SCORE_DIMENSION_MAX } from '../../shared/constants'
 import { STYLES } from '../../shared/enums'
 import type { Style } from '../../shared/enums'
+import { variantSlotLabel } from '../lib/titleExperiment'
 import { useApp } from '../state/AppProvider'
 import { createCardState } from '../state/appState'
 import type { NoteWithId } from '../state/appState'
@@ -26,9 +27,6 @@ const DIMENSION_LABELS: Record<keyof typeof SCORE_DIMENSION_MAX, string> = {
 
 const RISK_LABELS: Record<string, string> = { low: '低', medium: '中', high: '高' }
 
-/** 标题 A/B 的槽位标签：原标题之外的三项固定为 变体 A / B / C */
-const VARIANT_SLOTS = ['变体 A', '变体 B', '变体 C'] as const
-
 /** 当前生效的那一项高亮（标题可由用户在原稿与各变体之间切换） */
 function variantRowClass(active: boolean): string {
   return active ? 'variant variant-active' : 'variant'
@@ -42,6 +40,8 @@ export function NoteCard({ note }: { note: NoteWithId }) {
     submitScore,
     submitComplianceCheck,
     submitTitleVariants,
+    saveNoteToAssets,
+    isNoteSaved,
     retryCard,
     copyNote,
   } = useApp()
@@ -59,6 +59,9 @@ export function NoteCard({ note }: { note: NoteWithId }) {
   /** 标题 A/B 的基线标题（可能尚未生成过变体） */
   const originalTitle = card.originalTitle
   const usesOriginalTitle = originalTitle !== null && note.title === originalTitle
+
+  /** 当前内容是否已存入资产库（标题或正文变化后会重新变为未保存） */
+  const saved = isNoteSaved(note.localId)
 
   return (
     <article className="note-card">
@@ -255,6 +258,14 @@ export function NoteCard({ note }: { note: NoteWithId }) {
             >
               {card.status === 'checking' ? '检查中…' : '发布前检查'}
             </button>
+            <button
+              type="button"
+              className={saved ? 'action-button action-button-saved' : 'action-button'}
+              disabled={saved}
+              onClick={() => saveNoteToAssets(note.localId)}
+            >
+              {saved ? '已存入资产库 ✓' : '保存到资产库'}
+            </button>
           </div>
         </>
       )}
@@ -291,7 +302,7 @@ export function NoteCard({ note }: { note: NoteWithId }) {
             return (
               <div key={variant.title} className={variantRowClass(active)}>
                 <div className="variant-head">
-                  <span className="variant-slot">{VARIANT_SLOTS[index] ?? `变体 ${index + 1}`}</span>
+                  <span className="variant-slot">{variantSlotLabel(index)}</span>
                   <span className="chip chip-quiet">{variant.type}</span>
                   {active && <span className="variant-current">当前使用</span>}
                   <span className="variant-title">{variant.title}</span>

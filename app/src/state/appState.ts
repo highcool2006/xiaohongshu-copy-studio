@@ -11,6 +11,7 @@ import { COUNT_DEFAULT } from '../../shared/constants'
 import { sortStyles } from '../../shared/enums'
 import type { ContentDirection, ContentGoal, Style } from '../../shared/enums'
 import { minCountForStyles } from '../../shared/validation'
+import { removeAsset, upsertAsset } from '../lib/assetsStorage'
 import type {
   ComplianceResult,
   ContentStrategy,
@@ -21,6 +22,7 @@ import type {
   TitleVariant,
 } from '../../shared/types'
 import type { FrontendApiError } from '../api/http'
+import type { SavedAsset } from '../lib/assetsStorage'
 
 /** 工作台视图（不引入 react-router，用轻量 view state 切换） */
 export type ActiveView = 'workbench' | 'style-library' | 'review' | 'assets'
@@ -136,6 +138,15 @@ export interface AppState {
   filterRisk: 'all' | 'low' | 'medium' | 'high'
   /** 批量操作的选中项（localId） */
   selected: string[]
+  /**
+   * 资产库（localStorage 持久化，刷新后仍在）。
+   *
+   * state 只是内存镜像：写入一律经由 lib/assetsStorage 落盘后再 dispatch，
+   * 因此这里不存「是否已写入」之类的中间态。
+   */
+  assets: SavedAsset[]
+  /** 是否已从 localStorage 读取过（避免首帧误显示"还没有资产"） */
+  assetsLoaded: boolean
 }
 
 export const initialAppState: AppState = {
@@ -167,6 +178,8 @@ export const initialAppState: AppState = {
   filterStyle: 'all',
   filterRisk: 'all',
   selected: [],
+  assets: [],
+  assetsLoaded: false,
 }
 
 export type AppAction =
@@ -236,6 +249,10 @@ export type AppAction =
   // 复制反馈
   | { type: 'SET_COPY_FEEDBACK'; localId: string; value: 'copied' | 'failed' }
   | { type: 'RESET_COPY_FEEDBACK'; localId: string }
+  // 资产库（持久化由 AppProvider 负责，这里只同步内存镜像）
+  | { type: 'ASSETS_LOADED'; assets: SavedAsset[] }
+  | { type: 'ASSET_SAVED'; asset: SavedAsset }
+  | { type: 'ASSET_DELETED'; assetId: string }
 
 let localIdCounter = 0
 
@@ -573,6 +590,17 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return patchCard(state, action.localId, { copyFeedback: action.value })
     case 'RESET_COPY_FEEDBACK':
       return patchCard(state, action.localId, { copyFeedback: 'idle' })
+
+    /* ---------- 资产库 ---------- */
+    case 'ASSETS_LOADED':
+      return { ...state, assets: action.assets, assetsLoaded: true }
+
+    case 'ASSET_SAVED':
+      // 同一篇文案重复保存 = 更新（id 由内容指纹决定），最新的排在最前
+      return { ...state, assets: upsertAsset(state.assets, action.asset) }
+
+    case 'ASSET_DELETED':
+      return { ...state, assets: removeAsset(state.assets, action.assetId) }
 
     default:
       return state

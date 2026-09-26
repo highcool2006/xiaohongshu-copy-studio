@@ -20,22 +20,13 @@ import {
 } from '../../shared/enums'
 import type { ContentDirection, ContentGoal, Style } from '../../shared/enums'
 import { minCountForStyles } from '../../shared/validation'
+import { STYLE_GUIDE } from '../lib/styleGuide'
 import { useApp } from '../state/AppProvider'
 import { parseSellingPoints } from '../state/appState'
 import type { FormField } from '../state/appState'
 import { ReferencePanel } from './ReferencePanel'
 
 const FIELD_ORDER: FormField[] = ['product', 'sellingPoints', 'styles', 'count']
-
-/** 风格的极简说明（Record<Style, string> —— 枚举变动会编译失败） */
-const STYLE_DESCRIPTIONS: Record<Style, string> = {
-  亲切分享: '像朋友推荐',
-  专业测评: '理性分析',
-  搞笑段子: '轻松有梗',
-  干货攻略: '步骤清晰',
-  情绪共鸣: '先讲情绪',
-  清单种草: '条目清晰',
-}
 
 export function SetupPanel() {
   const { state, dispatch, submitGenerate, submitReferenceAnalyze } = useApp()
@@ -356,7 +347,7 @@ export function SetupPanel() {
                 }}
               >
                 <span className="style-card-name">{style}</span>
-                <span className="style-card-desc">{STYLE_DESCRIPTIONS[style]}</span>
+                <span className="style-card-desc">{STYLE_GUIDE[style].summary}</span>
               </button>
             )
           })}

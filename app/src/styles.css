@@ -1859,6 +1859,15 @@ body {
   cursor: not-allowed;
 }
 
+/* 已存入资产库：明确的正向状态，与普通禁用按钮区分开 */
+.action-button-saved,
+.action-button-saved:disabled {
+  border-color: var(--success-border);
+  background: var(--success-soft);
+  color: var(--success);
+  cursor: default;
+}
+
 /* ============================================================
    10. 卡片内交互（编辑 / 重写 / 标题变体 / 卡片级错误）
    ============================================================ */
@@ -2234,6 +2243,12 @@ body {
   color: var(--text-secondary);
 }
 
+.style-card-lg-summary {
+  margin: -6px 0 var(--gap-3);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* ---------- 数据看板 ---------- */
 
 .data-table {
@@ -2264,6 +2279,189 @@ body {
 .data-table td {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 资产库 ---------- */
+
+.assets-loading {
+  margin: 0;
+  padding: 20px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.asset-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.asset-card {
+  padding: var(--gap-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.asset-card-open {
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+
+.asset-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap-2) var(--gap-3);
+}
+
+/* 标题本身就是展开开关：去掉按钮外观，但保留键盘可聚焦 */
+.asset-toggle {
+  flex: 1 1 320px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.5;
+  color: var(--text);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.asset-toggle:hover {
+  color: var(--brand);
+}
+
+.asset-toggle:focus-visible {
+  outline: none;
+  border-radius: var(--radius-xs);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.asset-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.asset-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-2) var(--gap-4);
+  margin-top: 10px;
+}
+
+.asset-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.asset-stat-key {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.asset-stat-value {
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.asset-stat-max {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.asset-time {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.asset-body {
+  margin-top: var(--gap-4);
+  padding-top: var(--gap-4);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.asset-text {
+  max-width: 900px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.asset-hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-3);
+  margin-top: var(--gap-3);
+}
+
+.asset-section {
+  margin-top: var(--gap-4);
+  padding-top: var(--gap-3);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.asset-section-title {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.asset-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gap-2);
+  margin: 0 0 7px;
+  font-size: 12.5px;
+}
+
+.asset-line-key {
+  flex: none;
+  min-width: 58px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.asset-line-text {
+  min-width: 0;
+  color: var(--text-secondary);
+}
+
+.asset-actions {
+  display: flex;
+  gap: var(--gap-2);
+  margin-top: var(--gap-3);
+}
+
+/* 删除是破坏性操作：用错误色，且不与「查看」抢注意力 */
+.card-button-danger {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.card-button-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: var(--danger-soft);
 }
 
 /* ---------- 占位说明（明确「还没有」的区域） ---------- */

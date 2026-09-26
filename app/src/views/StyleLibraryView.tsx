@@ -1,21 +1,18 @@
 /**
- * 风格库（Phase 6：结构与预设展示；自定义风格保存在 Phase 9 接入）。
+ * 风格库（Phase 9）。
  *
- * ⚠️ 只展示前端可见的简短说明。完整的"写作策略"属于 Prompt 层（服务端），
+ * 数据来源：lib/styleGuide（前端展示层的**唯一**风格说明来源）——
+ * 此处不再自带一份风格定义，风格清单本身来自 app/shared/enums 的 STYLES。
+ *
+ * ⚠️ 只展示前端可见的写法说明。完整的「写作策略」属于 Prompt 层（服务端），
  *    前端不引用 Prompt 模块，避免把系统提示词打包进浏览器。
+ *
+ * 自定义风格：当前生成仍走 shared 的固定枚举（STYLES），因此这里只做展示，
+ * 不提供「自定义」入口 —— 保留的是**结构上的扩展位**（STYLE_GUIDE 为
+ * Record<Style, …>，枚举一变就编译失败，不会漏配）。
  */
 
-import { STYLES } from '../../shared/enums'
-import type { Style } from '../../shared/enums'
-
-const STYLE_SUMMARY: Record<Style, { fit: string; language: string; structure: string }> = {
-  亲切分享: { fit: '适合日常推荐、朋友视角', language: '口语、短句、有停顿', structure: '一条经历线，不列点' },
-  专业测评: { fit: '适合购买决策、参数说明', language: '克制陈述，不用感叹号', structure: '结论前置 + 维度拆解' },
-  搞笑段子: { fit: '适合轻松话题、反差表达', language: '极短句、留白', structure: '铺垫 → 转折 → 冷收' },
-  干货攻略: { fit: '适合步骤、清单、避坑', language: '祈使句、短句', structure: '结果前置 + 编号步骤' },
-  情绪共鸣: { fit: '适合生活方式、情绪表达', language: '中短句，真诚克制', structure: '情绪铺垫 → 产品为落点' },
-  清单种草: { fit: '适合多卖点并列、快速阅读', language: '条目平行、短句', structure: '编号条目 + 边界提醒' },
-}
+import { STYLE_GUIDE_LIST } from '../lib/styleGuide'
 
 export function StyleLibraryView() {
   return (
@@ -26,32 +23,31 @@ export function StyleLibraryView() {
       </header>
 
       <div className="style-library">
-        {STYLES.map((style: Style) => {
-          const info = STYLE_SUMMARY[style]
-          return (
-            <article key={style} className="style-card-lg">
-              <h3 className="style-card-lg-title">{style}</h3>
-              <dl className="style-facts">
-                <div>
-                  <dt>适合什么</dt>
-                  <dd>{info.fit}</dd>
-                </div>
-                <div>
-                  <dt>语言特点</dt>
-                  <dd>{info.language}</dd>
-                </div>
-                <div>
-                  <dt>结构特点</dt>
-                  <dd>{info.structure}</dd>
-                </div>
-              </dl>
-            </article>
-          )
-        })}
+        {STYLE_GUIDE_LIST.map((entry) => (
+          <article key={entry.style} className="style-card-lg">
+            <h3 className="style-card-lg-title">{entry.style}</h3>
+            <p className="style-card-lg-summary">{entry.summary}</p>
+            <dl className="style-facts">
+              <div>
+                <dt>适合什么</dt>
+                <dd>{entry.fit}</dd>
+              </div>
+              <div>
+                <dt>语言特点</dt>
+                <dd>{entry.language}</dd>
+              </div>
+              <div>
+                <dt>结构特点</dt>
+                <dd>{entry.structure}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
       </div>
 
       <div className="placeholder-note">
-        自定义风格与「收藏当前文案风格」将在 Phase 9 接入（localStorage 保存，带 schemaVersion）。
+        生成时仍只使用上述 6 种内置风格（由 shared 的固定枚举决定）。
+        自定义风格需要在生成链路中加入可扩展的风格定义，属于后续版本的范围。
       </div>
     </section>
   )
