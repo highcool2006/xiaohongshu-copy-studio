@@ -12,5 +12,5 @@
     "sourceMap": true,
     "declaration": false
   },
-  "include": ["./**/*.ts", "../shared/**/*.ts"]
+  "include": ["./**/*.ts", "../shared/**/*.ts", "../prompts/**/*.ts"]
 }

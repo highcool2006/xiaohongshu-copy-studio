@@ -42,7 +42,10 @@ export const SELLING_POINTS_MAX_ITEMS = 20
 
 export const TITLE_MAX_LENGTH = 60
 export const BODY_MAX_LENGTH = 3000
-export const HASHTAG_MAX_ITEMS = 20
+/** 每篇笔记的话题标签数量（产品规则：AI 自动生成 3～5 个） */
+export const HASHTAG_MIN_ITEMS = 3
+export const HASHTAG_MAX_ITEMS = 5
+/** 单个标签文本的长度上限 */
 export const HASHTAG_MAX_LENGTH = 20
 export const CONTENT_DIRECTIONS_MAX_ITEMS = 8
 export const STRENGTH_MAX_LENGTH = 100

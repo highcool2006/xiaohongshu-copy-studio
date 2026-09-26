@@ -18,6 +18,7 @@ import {
   COUNT_MIN,
   HASHTAG_MAX_ITEMS,
   HASHTAG_MAX_LENGTH,
+  HASHTAG_MIN_ITEMS,
   IMPROVEMENT_MAX_LENGTH,
   PRODUCT_MAX_LENGTH,
   SCORE_DIMENSION_MAX,
@@ -293,8 +294,12 @@ export function validateScoreInput(raw: unknown): ValidationResult<ScoreRequest>
 /* ---------- 结果结构校验（D8：AI 返回内容的校验） ---------- */
 
 function validateHashtags(value: unknown): ValidationResult<string[]> {
-  if (!Array.isArray(value) || value.length === 0 || value.length > HASHTAG_MAX_ITEMS) {
-    return failure('SCHEMA_FAILED', '话题标签数量不正确')
+  if (
+    !Array.isArray(value) ||
+    value.length < HASHTAG_MIN_ITEMS ||
+    value.length > HASHTAG_MAX_ITEMS
+  ) {
+    return failure('SCHEMA_FAILED', `话题标签数量需在 ${HASHTAG_MIN_ITEMS}～${HASHTAG_MAX_ITEMS} 个`)
   }
   const hashtags: string[] = []
   for (const item of value) {
