@@ -18,6 +18,7 @@ import { computeDiversityReport } from '../../shared/diversity.js'
 import { validateGenerateInput } from '../../shared/validation.js'
 import type { AiClient } from '../ai/client.js'
 import { processNotesResult } from '../ai/structured.js'
+import type { StructuredFailure } from '../ai/structured.js'
 import {
   sendApiError,
   toApiError,
@@ -26,6 +27,27 @@ import {
 
 export interface GenerateRouteDeps {
   aiClient: AiClient
+}
+
+/**
+ * 生成失败的排障日志。
+ *
+ * ⚠️ 只输出**结构化失败原因**，绝不输出三类敏感内容：
+ *   - AI 原始响应：rawText 是模型自由生成的正文，可能夹带用户数据 —— 本函数拿不到它
+ *   - 用户完整输入：本函数不接收任何请求体
+ *   - 凭据：本函数不接触 Authorization / API Key，也无从取得
+ *
+ * 输出的三个字段都是 structured 层的**校验结论**，形如
+ *   "总分应等于各维度之和（期望 82，实际 80）" / "创作角度的类型不在允许范围内"
+ * 只含枚举名、数值与位置信息，不含正文。
+ *
+ * 存在意义：此前真实 AI 失败在服务端**不留任何痕迹**（detail 只随响应返回且被前端丢弃），
+ * 导致失败无法事后诊断。本日志只补可观测性，不改变任何行为。
+ */
+function logStructuredFailure(failure: StructuredFailure): void {
+  console.error(
+    `[generate] 生成失败  type=${failure.type}  detail=${failure.detail}  retryReason=${failure.retryReason}`,
+  )
 }
 
 export function registerGenerateRoute(app: Express, deps: GenerateRouteDeps): void {
@@ -64,6 +86,8 @@ export function registerGenerateRoute(app: Express, deps: GenerateRouteDeps): vo
       )
 
       if (!result.ok) {
+        // 排障日志（D8 重试后仍失败）—— 只记结构化原因，响应体不变
+        logStructuredFailure(result.failure)
         // 用户文案由 HTTP 层按契约填充；retryReason 只用于上面那次重试，不外泄
         sendApiError(res, toApiErrorFromStructuredFailure(result.failure))
         return
@@ -72,6 +96,7 @@ export function registerGenerateRoute(app: Express, deps: GenerateRouteDeps): vo
       const { strategy } = result.value
       if (strategy === undefined) {
         // requireStrategy 保证不会走到这里；保留兜底以免静默返回残缺响应
+        console.error('[generate] 生成失败  type=SCHEMA_FAILED  detail=缺少 strategy（requireStrategy 已开启）')
         sendApiError(res, { type: 'SCHEMA_FAILED', message: '生成结果格式异常，请重试或调整输入后重试' })
         return
       }
