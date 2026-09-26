@@ -10,8 +10,11 @@
 import { CONTENT_DIRECTIONS, STYLES } from '../shared/enums.js'
 import type { RewriteRequest } from '../shared/types.js'
 import {
+  AI_NESS_RULES_TEXT,
   ALLOWED_DIRECTIONS_TEXT,
   ALLOWED_STYLES_TEXT,
+  COMPLIANCE_RULES_TEXT,
+  COVER_RULES_TEXT,
   HASHTAG_RULE_TEXT,
   JSON_OUTPUT_RULES,
   NOTE_JSON_SCHEMA_TEXT,
@@ -58,9 +61,19 @@ ${NO_FABRICATION_RULES}
 10. score 的字段与取值范围如下：
 ${SCORE_CONTRACT_TEXT}
 
+【必须回填的字段】
+11. "angle_id"：若 <program_data> 提供了 angle_id，**必须原样返回**；未提供时填 "angle-1"（程序会接管该字段）。
+12. 输出必须包含 ai_ness / compliance / cover_suggestion（结构见输出契约）。
+
+${AI_NESS_RULES_TEXT}
+
+${COMPLIANCE_RULES_TEXT}
+
+${COVER_RULES_TEXT}
+
 【输出格式】
 ${JSON_OUTPUT_RULES}
-11. "notes" 数组长度**固定为 1**。
+13. "notes" 数组长度**固定为 1**。
 
 ${REWRITE_WRITING_SPEC_TEXT}
 
@@ -72,7 +85,7 @@ Step 4 事实自检与回改（**发现即改**）：是否丢失核心事实或
 　　**命中即改正文，不得只写进 improvement；改完再核对一遍。**
 Step 5 原生感自检与回改（**发现即改**）：像真人发的吗？有没有模板词或"同一语义只换说法"的模板？有没有空泛形容词？有没有机械总结段？
 　　**命中即改正文；改完再核对一遍。**
-Step 6 重新评分：**只有 Step 4 与 Step 5 全部通过后才进入本步**。按评分标准给出新的五个维度、total、strength 与 improvement。
+Step 6 重新评分：**只有 Step 4 与 Step 5 全部通过后才进入本步**。按评分标准给出新的六个维度、total、strength 与 improvement，并填写 ai_ness / compliance / cover_suggestion。
 
 # Output
 只输出一个 JSON 对象，"notes" 有且仅有 1 篇：
@@ -88,10 +101,13 @@ ${SAFETY_SECTION}`
 /* ---------- 构建函数 ---------- */
 
 export function buildRewritePrompt(request: RewriteRequest): PromptMessages {
-  const programData = {
+  const programData: Record<string, unknown> = {
     target_style: request.target_style,
     allowed_styles: STYLES,
     allowed_content_directions: CONTENT_DIRECTIONS,
+  }
+  if (request.angle_id !== undefined) {
+    programData['angle_id'] = request.angle_id
   }
 
   const currentNote = {

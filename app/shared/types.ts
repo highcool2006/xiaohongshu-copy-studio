@@ -197,6 +197,11 @@ export interface RewriteRequest {
   /** 目标新风格；与 current_note.style（当前风格）区分 */
   target_style: Style
   current_note: CurrentNote
+  /**
+   * 原笔记的创作角度 id（可选）。
+   * 提供时 AI 必须原样回填，且**以程序传入的值为准**；未提供时 AI 填 "angle-1"，由程序接管。
+   */
+  angle_id?: string
 }
 
 export interface RewriteResponse {

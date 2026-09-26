@@ -121,7 +121,7 @@ export const SCORE_CONTRACT_TEXT = [
     const key = dimension as keyof typeof SCORE_DIMENSION_MAX
     return `- "${dimension}"（${SCORE_DIMENSION_LABEL[key]}）：0 ~ ${max} 的**整数**\n  ${SCORE_DIMENSION_CRITERIA[key]}`
   }),
-  `- "total"（总分）：必须等于上述五个维度之和，为 0 ~ ${SCORE_TOTAL_MAX} 的**整数**`,
+  `- "total"（总分）：必须等于上述 ${Object.keys(SCORE_DIMENSION_MAX).length} 个维度之和，为 0 ~ ${SCORE_TOTAL_MAX} 的**整数**`,
   '- "strength"（优势）：一句具体的优势，非空字符串',
   '- "improvement"（改进建议）：一句具体的改进建议，非空字符串',
 ].join('\n')
@@ -145,14 +145,99 @@ export const SCORE_JSON_SCHEMA_TEXT = `{
 ${indent(SCORE_JSON_FIELDS, 2)}
 }`
 
-/** 单篇 note 的 JSON 结构示例（generate 与 rewrite 共用） */
+/** 单篇 note 的 JSON 结构示例（generate 与 rewrite 共用；V2） */
 export const NOTE_JSON_SCHEMA_TEXT = `{
 ${indent(
-  '"title": "标题",\n"body": "正文",\n"hashtags": ["标签文本，不含 # 号"],\n"content_directions": ["内容方向，取自 allowed_content_directions"],\n"style": "风格，取自 allowed_styles"',
+  '"title": "标题",\n"body": "正文",\n"hashtags": ["标签文本，不含 # 号"],\n"style": "风格，取自 allowed_styles",\n"content_directions": ["内容方向，取自 allowed_content_directions"],\n"angle_id": "本篇对应的角度 id（必须是 strategy.angles 中某一个的 id）",\n"cover_suggestion": {\n  "headline": "封面标题（不超过 40 字）",\n  "visual_subject": "画面主体",\n  "composition": "构图描述"\n},\n"ai_ness": {\n  "risk_level": "low 或 medium 或 high",\n  "issues": ["发现的模板化问题；没有则为空数组"],\n  "suggestions": ["改进建议；没有则为空数组"]\n},\n"compliance": {\n  "risk_level": "low 或 medium 或 high",\n  "issues": ["风险表达；没有则为空数组"],\n  "suggestions": ["修改建议；没有则为空数组"]\n}',
   2,
 )},
 ${indent(`"score": ${SCORE_JSON_SCHEMA_TEXT}`, 2)}
 }`
+
+/** 内容策略的 JSON 结构示例（仅 generate） */
+export const STRATEGY_JSON_SCHEMA_TEXT = `{
+  "summary": "本轮内容总策略（2～3 句）",
+  "target_users": ["本次面向的目标人群；用户未提供时可写你的推测"],
+  "scenarios": ["本次涉及的使用场景；用户未提供时可写你的建议场景"],
+  "angles": [
+    {
+      "id": "角度 id（如 a1、a2…，各篇唯一）",
+      "type": "场景 / 人群 / 决策 / 产品 / 对比 / 情绪 / 清单",
+      "audience": "这一篇讲给谁看",
+      "scenario": "这一篇落在什么场景",
+      "core_idea": "这一篇要讲的那一件事（一句话）",
+      "hook_type": "开头类型（如 场景切入 / 结论前置 / 反差 / 提问 / 清单直给 / 情绪切入）",
+      "structure_type": "组织方式（如 叙事线 / 维度拆解 / 编号清单 / 铺垫转折 / 条件式）",
+      "ending_type": "结尾方式（如 冷收 / 提醒 / 判断标准 / 轻邀请 / 自然停顿）"
+    }
+  ]
+}`
+
+/* ============================================================
+   V2 策略与检查（输出契约的一部分）
+   ============================================================ */
+
+/** 策略与角度规划规则（仅 generate） */
+export const STRATEGY_RULES_TEXT = `【内容策略与创作角度 —— 这是本产品与"文案生成器"的核心区别】
+
+先产出 strategy，再产出一一对应的 notes。
+
+1. "strategy.summary"：本轮内容的**总策略**，2～3 句。说明本轮内容从哪里来（已知事实有哪些、哪些不能编）以及打算怎么展开。
+2. "strategy.target_users" / "strategy.scenarios"：优先使用用户提供的值；用户未提供时可给出你的**推测或建议**，但必须是常识层面的合理推断，**不得编造具体用户画像数据**。
+3. "strategy.angles"：**每篇文案一个角度**，数量必须等于总篇数。
+4. **每个 angle 必须是一个不同的内容 IDEA，不是同一种说法的不同措辞。**
+   - 反例（不合格）：7 篇都是"场景分享"，只是把时间从"下午三点"换成"晚上八点"。
+   - 正例（合格）：场景 / 人群 / 决策 / 产品 / 对比 / 情绪 / 清单 各切入一次。
+5. 每个 angle 必须写清：讲给谁看（audience）、落在什么场景（scenario）、**这一篇要讲的那一件事**（core_idea，一句话）、开头类型（hook_type）、组织方式（structure_type）、结尾方式（ending_type）。
+6. 整批的 hook_type、structure_type、ending_type **必须有明显差异**；"结论前置"型开头最多 2 篇。
+7. "angle.type" 只能取：场景 / 人群 / 决策 / 产品 / 对比 / 情绪 / 清单。
+8. 信息不足时，角度应向**决策、场景、情绪、清单**倾斜（不依赖产品细节也能成立），不要硬凑"产品亮点"。
+9. 每篇 note 的 "angle_id" 必须等于它对应的 angle 的 "id"。`
+
+/** AI 味自检规则（generate 与 rewrite 共用） */
+export const AI_NESS_RULES_TEXT = `【AI 味自检 —— 独立质量风险，不进入总分】
+
+每篇都要给出 "ai_ness"，并把发现的问题写进 issues（没有则为空数组）。
+
+重点检查（命中即降低风险等级）：
+- 套模板、机械总结、过度完整、过度解释
+- "首先 / 其次 / 最后" 及其换词版本（如"第一、第二"）
+- "总的来说""值得一提""希望对你有帮助""如果你……那么……"高频出现
+- 空泛价值判断（"非常实用""值得拥有"）
+- 标准化结尾、相似开头、相似句式
+- 与本批其他篇结构雷同
+- **仅替换产品关键词**（换掉产品名后文章仍然成立 = 高度可疑）
+- 没有具体场景、没有具体信息
+
+风险等级：low / medium / high。
+
+**若某篇判定为 high，必须回到该篇把问题改掉再重新自检**；改不掉就保留 high 并在 issues 里说明，**不允许把 high 写成 low。**`
+
+/** 合规自检规则（generate 与 rewrite 共用） */
+export const COMPLIANCE_RULES_TEXT = `【合规自检 —— 独立风险提示，不进入总分】
+
+每篇都要给出 "compliance"，把风险表达写进 issues。
+
+至少检查：
+- 虚假事实、虚构体验、虚构用户评价、虚构销量、虚构数据
+- 绝对化表达（"最好""第一""百分之百"）
+- 夸大效果、保证性承诺（"一定""立刻见效"）
+- 无依据比较、虚假前后对比
+- 恶意模仿他人内容、可能造成误导的表达
+
+风险等级：low / medium / high。**只改风险表达，不要把正常自然的表达改得死板。**
+
+注意：这是给用户看的风险提示，**不代表平台审核结果**，不要在文案里写"已通过审核"之类的话。`
+
+/** 封面创意建议规则（generate 与 rewrite 共用；只生成创意，不生成图片） */
+export const COVER_RULES_TEXT = `【封面创意建议】
+
+每篇给出 "cover_suggestion"（**只给创意文字，不要生成图片，也不要写图片生成指令**）：
+- "headline"：封面上的标题短句（不超过 40 字）
+- "visual_subject"：画面主体是什么（例如"产品本身""产品与使用场景"）
+- "composition"：构图描述（主体位置、留白、背景要求）
+
+封面文案同样受事实边界约束：不得出现用户未提供的信息。`
 
 /* ============================================================
    V2 写作规范（generate 与 rewrite 共用）

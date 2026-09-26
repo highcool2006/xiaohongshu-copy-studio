@@ -10,6 +10,7 @@
 import { COUNT_DEFAULT } from '../../shared/constants'
 import { sortStyles } from '../../shared/enums'
 import type { Style } from '../../shared/enums'
+import { minCountForStyles } from '../../shared/validation'
 import type { Information, Note, Score } from '../../shared/types'
 import type { FrontendApiError } from '../api/http'
 
@@ -172,10 +173,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'TOGGLE_STYLE': {
       const selected = state.form.styles.includes(action.style)
-      const next = selected
+      const nextStyles = selected
         ? state.form.styles.filter((style) => style !== action.style)
         : sortStyles([...state.form.styles, action.style]) // 按固定枚举顺序存放
-      return { ...state, form: { ...state.form, styles: next } }
+      // 选中风格变化后，篇数不能低于「每个选中风格至少 1 篇」的动态下限
+      const nextCount = Math.max(state.form.count, minCountForStyles(nextStyles.length))
+      return { ...state, form: { ...state.form, styles: nextStyles, count: nextCount } }
     }
 
     case 'SET_COUNT':

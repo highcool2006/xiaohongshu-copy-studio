@@ -10,11 +10,12 @@
 
 import { useEffect, useRef } from 'react'
 
-import { COUNT_MAX, COUNT_MIN } from '../../shared/constants'
+import { COUNT_MAX } from '../../shared/constants'
 import { STYLES } from '../../shared/enums'
 import type { Style } from '../../shared/enums'
 import { useApp } from '../state/AppProvider'
 import type { FormField } from '../state/appState'
+import { minCountForStyles } from '../../shared/validation'
 
 /** 错误焦点优先级：按表单自上而下 */
 const FIELD_ORDER: FormField[] = ['product', 'sellingPoints', 'styles', 'count']
@@ -36,6 +37,8 @@ export function InputPanel() {
   const { state, dispatch, submitGenerate } = useApp()
   const { form, errors, batch } = state
   const isLoading = batch.status === 'loading'
+  /** 篇数下限随选中风格数变化（每个选中风格至少 1 篇） */
+  const minCount = minCountForStyles(form.styles.length)
 
   const productRef = useRef<HTMLInputElement>(null)
   const sellingPointsRef = useRef<HTMLTextAreaElement>(null)
@@ -165,9 +168,9 @@ export function InputPanel() {
             type="button"
             className="stepper-button"
             aria-label="减少一篇"
-            disabled={form.count <= COUNT_MIN}
+            disabled={form.count <= minCount}
             onClick={() => {
-              dispatch({ type: 'SET_COUNT', value: Math.max(COUNT_MIN, form.count - 1) })
+              dispatch({ type: 'SET_COUNT', value: Math.max(minCount, form.count - 1) })
               dispatch({ type: 'CLEAR_FIELD_ERROR', field: 'count' })
             }}
           >
@@ -195,7 +198,9 @@ export function InputPanel() {
           <p className="field-error">{errors.count}</p>
         ) : (
           <p className="field-hint">
-            可选 {COUNT_MIN}～{COUNT_MAX} 篇
+            {form.styles.length > 5
+              ? `已选 ${form.styles.length} 种风格，至少 ${minCount} 篇 · 最多 ${COUNT_MAX} 篇`
+              : `可选 ${minCount}～${COUNT_MAX} 篇`}
           </p>
         )}
       </div>

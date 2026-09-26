@@ -87,8 +87,6 @@ export const MESSAGES = {
   stylesRequired: '至少选择 1 种风格',
   styleInvalid: '风格不在允许范围内',
   countInteger: '篇数需填写整数',
-  countRange: `篇数需在 ${COUNT_MIN}～${COUNT_MAX} 之间`,
-  countTooSmall: '篇数不能少于已选风格的数量',
   targetStyleInvalid: '目标风格不在允许范围内',
   currentNoteInvalid: '当前文案内容不完整',
   titleRequired: '标题不能为空',
@@ -109,6 +107,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
+}
+
+/**
+ * 篇数的**动态下限**：每个选中风格至少 1 篇，因此下限随选中风格数变化。
+ *
+ *   1～5 种风格 → 最少 5 篇
+ *   6 种风格   → 最少 6 篇
+ *
+ * 前端步进器与后端校验共用本函数，保证两侧一致。
+ */
+export function minCountForStyles(styleCount: number): number {
+  return Math.max(COUNT_MIN, styleCount)
 }
 
 function failure<T>(type: ApiError['type'], message: string, field?: ErrorField): ValidationResult<T> {
@@ -188,20 +198,17 @@ function validateStyles(value: unknown): ValidationResult<Style[]> {
 }
 
 function validateCount(value: unknown, styleCount: number): ValidationResult<number> {
+  const min = minCountForStyles(styleCount)
+
   if (value === undefined || value === null) {
-    if (COUNT_DEFAULT < styleCount) {
-      return failure('INVALID_INPUT', MESSAGES.countTooSmall, 'count')
-    }
-    return { ok: true, value: COUNT_DEFAULT }
+    // 未填写：取「默认值」与「动态下限」中的较大者，而不是报错
+    return { ok: true, value: Math.max(COUNT_DEFAULT, min) }
   }
   if (typeof value !== 'number' || !Number.isInteger(value)) {
     return failure('INVALID_INPUT', MESSAGES.countInteger, 'count')
   }
-  if (value < COUNT_MIN || value > COUNT_MAX) {
-    return failure('INVALID_INPUT', MESSAGES.countRange, 'count')
-  }
-  if (value < styleCount) {
-    return failure('INVALID_INPUT', MESSAGES.countTooSmall, 'count')
+  if (value < min || value > COUNT_MAX) {
+    return failure('INVALID_INPUT', `篇数需在 ${min}～${COUNT_MAX} 之间`, 'count')
   }
   return { ok: true, value }
 }
@@ -394,6 +401,19 @@ export function validateRewriteInput(raw: unknown): ValidationResult<RewriteRequ
   const currentNote = validateCurrentNote(raw.current_note)
   if (!currentNote.ok) return currentNote
 
+  // angle_id 可选；提供时必须是合法字符串
+  const rawAngleId = raw.angle_id
+  if (rawAngleId !== undefined && !isNonEmptyString(rawAngleId)) {
+    return failure('INVALID_INPUT', '创作角度标识不正确', 'current_note')
+  }
+  const angleId =
+    isNonEmptyString(rawAngleId) && rawAngleId.trim().length <= ANGLE_ID_MAX_LENGTH
+      ? rawAngleId.trim()
+      : undefined
+  if (isNonEmptyString(rawAngleId) && angleId === undefined) {
+    return failure('INVALID_INPUT', '创作角度标识过长', 'current_note')
+  }
+
   return {
     ok: true,
     value: {
@@ -401,6 +421,7 @@ export function validateRewriteInput(raw: unknown): ValidationResult<RewriteRequ
       selling_points: sellingPoints.value,
       target_style: raw.target_style,
       current_note: currentNote.value,
+      ...(angleId === undefined ? {} : { angle_id: angleId }),
     },
   }
 }
