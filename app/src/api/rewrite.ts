@@ -9,6 +9,8 @@ import type { ContentDirection, Style } from '../../shared/enums'
 import type { Note } from '../../shared/types'
 import { postJson, unexpectedError } from './http'
 import type { FrontendApiError } from './http'
+import { isMockEnabled } from './mockMode'
+import { getMockRewriteResponse } from './mockRewrite'
 
 export interface RewritePayload {
   product: string
@@ -28,6 +30,12 @@ export type RewriteApiResult =
   | { ok: false; error: FrontendApiError }
 
 export async function requestRewrite(payload: RewritePayload): Promise<RewriteApiResult> {
+  // 【仅开发验收】开关开启时短路，不发请求；生产路径不受影响
+  if (isMockEnabled()) {
+    console.info('[dev] VITE_USE_MOCK_DATA=true：本次重写使用本地 Mock 数据，未调用 /api/rewrite')
+    return { ok: true, value: getMockRewriteResponse(payload)[0]! }
+  }
+
   const result = await postJson('/api/rewrite', payload)
   if (!result.ok) {
     return result

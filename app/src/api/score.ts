@@ -8,6 +8,8 @@ import type { ContentDirection, Style } from '../../shared/enums'
 import type { Score } from '../../shared/types'
 import { postJson, unexpectedError } from './http'
 import type { FrontendApiError } from './http'
+import { isMockEnabled } from './mockMode'
+import { getMockScore } from './mockScore'
 
 export interface ScorePayload {
   title: string
@@ -23,6 +25,12 @@ export type ScoreApiResult =
   | { ok: false; error: FrontendApiError }
 
 export async function requestScore(payload: ScorePayload): Promise<ScoreApiResult> {
+  // 【仅开发验收】开关开启时短路，不发请求；生产路径不受影响
+  if (isMockEnabled()) {
+    console.info('[dev] VITE_USE_MOCK_DATA=true：本次评分使用本地 Mock 数据，未调用 /api/score')
+    return { ok: true, value: getMockScore({ title: payload.title, body: payload.body, style: payload.style }) }
+  }
+
   const result = await postJson('/api/score', payload)
   if (!result.ok) {
     return result

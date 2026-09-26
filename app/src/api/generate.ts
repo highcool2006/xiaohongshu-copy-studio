@@ -8,7 +8,8 @@
 import type { GenerateInput, GenerateResponse } from '../../shared/types'
 import { postJson, unexpectedError } from './http'
 import type { FrontendApiError } from './http'
-import { getMockGenerateResponse, isMockGenerateEnabled } from './mockGenerate'
+import { getMockGenerateResponse } from './mockGenerate'
+import { isMockEnabled } from './mockMode'
 
 export type GenerateApiResult =
   | { ok: true; value: GenerateResponse }
@@ -26,7 +27,7 @@ function isGenerateResponse(value: unknown): value is GenerateResponse {
 export async function requestGenerate(input: GenerateInput): Promise<GenerateApiResult> {
   // 【仅开发视觉验收】显式开关开启时，直接用本地 Mock 数据短路，不发任何请求。
   // 开关默认关闭；关闭时下面的真实请求路径与之前**完全一致**，契约未变。
-  if (isMockGenerateEnabled()) {
+  if (isMockEnabled()) {
     console.info(
       '[dev] VITE_USE_MOCK_DATA=true：本次使用本地 Mock 数据，未调用 /api/generate',
     )

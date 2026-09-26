@@ -31,12 +31,6 @@ import type {
   Score,
 } from '../../shared/types'
 
-/** 开关：只认显式的 "true"，其它值（含未设置）一律视为关闭 */
-export function isMockGenerateEnabled(): boolean {
-  const env = (import.meta as { env?: Record<string, string | undefined> }).env
-  return env?.VITE_USE_MOCK_DATA === 'true'
-}
-
 interface MockTemplate {
   style: Style
   title: string
