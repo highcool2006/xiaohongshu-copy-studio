@@ -1,0 +1,36 @@
+{
+  "name": "xiaohongshu-copy-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "小红书爆款文案工坊 —— 输入产品与卖点，批量生成不同风格的小红书种草笔记",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "dev": "concurrently -n web,api -c magenta,blue \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "vite",
+    "dev:api": "tsx watch app/server/index.ts",
+    "build": "npm run build:web && npm run build:api",
+    "build:web": "vite build",
+    "build:api": "tsc -p app/server/tsconfig.json",
+    "start": "node dist/server/index.js",
+    "typecheck": "tsc -p app/server/tsconfig.json --noEmit && tsc -p app/src/tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1"
+  }
+}
