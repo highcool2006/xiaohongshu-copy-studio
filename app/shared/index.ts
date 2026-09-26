@@ -10,6 +10,7 @@
 
 export * from './allocation.js'
 export * from './constants.js'
+export * from './diversity.js'
 export * from './enums.js'
 export * from './types.js'
 export * from './validation.js'

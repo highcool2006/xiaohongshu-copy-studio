@@ -1,19 +1,28 @@
 /**
- * 脚手架占位组件。
+ * 单页面外壳：页头身份层 + 左右工作区。
  *
- * 仅用于确认「React + TypeScript + Vite」可以启动，
- * 不是产品页面实现。真正的页面结构见 docs/页面结构方案.md。
+ * 页面结构见 docs/页面结构方案.md：单页、无路由、无页脚、无导航。
+ * 本阶段只接通「输入 → /api/generate → 结果展示」这一条链路。
  */
+
+import { InputPanel } from './components/InputPanel'
+import { ResultPanel } from './components/ResultPanel'
+import { AppProvider } from './state/AppProvider'
+
 export default function App() {
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: 32, lineHeight: 1.8 }}>
-      <h1 style={{ margin: 0 }}>小红书爆款文案工坊</h1>
-      <p style={{ margin: '8px 0 0', color: '#666' }}>
-        脚手架已启动 —— 前端 Vite · React · TypeScript
-      </p>
-      <p style={{ margin: '4px 0 0', color: '#666' }}>
-        产品页面尚未实现（Phase 3 后续步骤）
-      </p>
-    </main>
+    <AppProvider>
+      <div className="app">
+        <header className="app-header">
+          <h1 className="app-title">小红书爆款文案工坊</h1>
+          <p className="app-tagline">输入产品和卖点，批量生成不同风格的小红书种草笔记</p>
+        </header>
+
+        <main className="app-main">
+          <InputPanel />
+          <ResultPanel />
+        </main>
+      </div>
+    </AppProvider>
   )
 }

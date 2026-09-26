@@ -10,10 +10,12 @@
 
 import { STYLES } from './enums.js'
 import type { Style } from './enums.js'
-import type { Note } from './types.js'
 
 /** 分配表：只包含用户选中的风格 */
 export type Allocation = Partial<Record<Style, number>>
+
+/** 只要带 style 的笔记都能参与分配比对（Note 与 AI 原始输出的 AiNote 均适用） */
+type StyledNote = { style: Style }
 
 /**
  * 计算分配表。
@@ -46,8 +48,8 @@ export function allocateStyles(styles: readonly Style[], count: number): Allocat
   return allocation
 }
 
-/** 统计实际结果中各风格的篇数 */
-export function countByStyle(notes: readonly Note[]): Record<string, number> {
+/** 统计实际结果中各风格的篇数（只需 style 字段，Note 与 AiNote 都适用） */
+export function countByStyle(notes: readonly StyledNote[]): Record<string, number> {
   const counts: Record<string, number> = {}
   for (const note of notes) {
     counts[note.style] = (counts[note.style] ?? 0) + 1
@@ -62,7 +64,7 @@ export function countByStyle(notes: readonly Note[]): Record<string, number> {
  *          该描述可用于 D8 的「重试时把失败原因反馈给模型」。
  */
 export function describeAllocationMismatch(
-  notes: readonly Note[],
+  notes: readonly StyledNote[],
   allocation: Allocation,
 ): string | null {
   const actual = countByStyle(notes)

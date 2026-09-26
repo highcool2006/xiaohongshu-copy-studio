@@ -158,6 +158,26 @@ export interface AiClientDeps {
 }
 
 /**
+ * 组装「没有可提取文本」的诊断信息（仅用于排障）。
+ *
+ * ⚠️ 只记录**结构性元数据**：停止原因、内容块类型、块数量、输出 token 数。
+ *    **绝不写入任何块的内容**——尤其不能把 thinking 正文带进异常里。
+ */
+function describeEmptyResponse(
+  message: { stop_reason?: string | null; usage?: { output_tokens?: number } },
+  blockTypes: string[],
+): string {
+  const outTokens = message.usage?.output_tokens
+  return [
+    '模型未返回任何文本内容',
+    `stop_reason=${message.stop_reason ?? 'unknown'}`,
+    `blocks=[${blockTypes.join(', ')}]`,
+    `content_len=${blockTypes.length}`,
+    ...(typeof outTokens === 'number' ? [`out_tokens=${outTokens}`] : []),
+  ].join('；')
+}
+
+/**
  * 创建 AI Client。
  *
  * SDK 实例**懒初始化**：只有真正发起调用时才读取环境变量，
@@ -201,7 +221,9 @@ export function createAiClient(deps: AiClientDeps = {}): AiClient {
       }
 
       const parts: string[] = []
+      const blockTypes: string[] = []
       for (const block of message.content) {
+        blockTypes.push(block.type) // 只记录类型，不读取任何块的内容
         if (block.type === 'text') {
           parts.push(block.text)
         }
@@ -209,7 +231,7 @@ export function createAiClient(deps: AiClientDeps = {}): AiClient {
 
       const text = parts.join('').trim()
       if (text.length === 0) {
-        throw new AiCallError('INVALID_RESPONSE', '模型未返回任何文本内容')
+        throw new AiCallError('INVALID_RESPONSE', describeEmptyResponse(message, blockTypes))
       }
       return text
     },

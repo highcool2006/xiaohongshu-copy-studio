@@ -38,8 +38,8 @@ const SYSTEM_PROMPT = `${SCORE_ROLE}
 
 # Constraints
 1. **只评分**：不得输出任何改写后的文案，不得给出新的标题或正文，不得提出具体改写文本；不得生成 hashtags 或 content_directions。
-2. 必须结合 <user_data> 中的 product 与 selling_points 作为**对照基准**，判断文案是否覆盖了这些信息 —— 这是 "information_completeness" 的依据。
-3. "style_match" 依据文案的实际表达是否贴合 "style" 字段声明的风格（可选值：${ALLOWED_STYLES_TEXT}）。
+2. "information_completeness" 衡量的是「围绕**这篇文案自身的核心观点**，读者需要知道的信息是否已经足够」——**不是卖点覆盖得越多越好**。允许一篇只讲一个卖点、允许短文；堆砌无关信息应当扣分。<user_data> 中的 product 与 selling_points 只作为「有没有编造」的对照依据，**不是必须全覆盖的清单**。
+3. "style_match" 依据文案的实际表达是否真正执行了 "style" 字段所声明风格应有的开头、组织方式、句式、信息密度、视角、情绪与结尾（可选值：${ALLOWED_STYLES_TEXT}）。只因为出现了几个口语词，不构成高分理由。
 4. "content_directions" 只能取 ${ALLOWED_DIRECTIONS_TEXT}；若输入中的内容方向合法，应据其判断表达是否贴题。
 5. ${SCORE_POSITION_TEXT}
 6. **严禁输出**任何预测性数据或指标：爆款概率、viral_probability、推荐指数、预计点赞数、预计收藏数、以及任何形式的虚构数据预测。

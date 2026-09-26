@@ -61,10 +61,14 @@ export function sendApiError(res: Response, error: ApiError): void {
 export function toApiError(error: unknown): ApiError {
   if (error instanceof AiCallError) {
     const status = error.status === undefined ? '' : `; status=${error.status}`
+    const clientDetail = error.message.length > 0 ? `; ${error.message}` : ''
     return {
       type: 'AI_CALL_FAILED',
+      // 面向用户的文案**始终固定**，不随内部原因变化
       message: AI_CALL_FAILED_MESSAGE,
-      detail: `reason=${error.reason}${status}`,
+      // 面向开发的诊断：分类 + HTTP 状态码 + AI Client 的结构性说明
+      // （只含停止原因 / 块类型等元数据，不含凭据、不含任何块内容；界面永不渲染）
+      detail: `reason=${error.reason}${status}${clientDetail}`,
     }
   }
 

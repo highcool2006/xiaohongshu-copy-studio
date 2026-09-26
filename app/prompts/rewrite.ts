@@ -16,6 +16,7 @@ import {
   JSON_OUTPUT_RULES,
   NOTE_JSON_SCHEMA_TEXT,
   NO_FABRICATION_RULES,
+  REWRITE_WRITING_SPEC_TEXT,
   ROLE_HEADER,
   SAFETY_SECTION,
   SCORE_CONTRACT_TEXT,
@@ -46,26 +47,32 @@ const SYSTEM_PROMPT = `${ROLE_HEADER}
 ${NO_FABRICATION_RULES}
 
 【必须改变】
-4. 只改变表达方式、语言风格与呈现方式，使其符合 target_style（可选值：${ALLOWED_STYLES_TEXT}）。
-5. 输出的 "style" 必须**等于** target_style。
-6. "content_directions" 只能取 ${ALLOWED_DIRECTIONS_TEXT}。
+5. 使其符合 target_style（可选值：${ALLOWED_STYLES_TEXT}）。
+   **换风格不是换语气词。**必须真正改变：开头方式、组织方式、句式、信息密度、视角、情绪与结尾方式 —— 六项里只改了措辞而结构照旧，视为不合格。
+6. 输出的 "style" 必须**等于** target_style。
+7. "content_directions" 只能取 ${ALLOWED_DIRECTIONS_TEXT}。
 
 【评分】
-7. 重写后必须**重新评分**：评分必须针对**重写后的 title / body / style / content_directions** 重新判断，**不得沿用或复制旧分数**。
-8. ${SCORE_POSITION_TEXT}
-9. score 的字段与取值范围如下：
+8. 重写后必须**重新评分**：评分必须针对**重写后的 title / body / style / content_directions** 重新判断，**不得沿用或复制旧分数**。
+9. ${SCORE_POSITION_TEXT}
+10. score 的字段与取值范围如下：
 ${SCORE_CONTRACT_TEXT}
 
 【输出格式】
 ${JSON_OUTPUT_RULES}
-10. "notes" 数组长度**固定为 1**。
+11. "notes" 数组长度**固定为 1**。
+
+${REWRITE_WRITING_SPEC_TEXT}
 
 # Workflow
-1. 理解原文：提取核心事实、核心卖点与内容方向。
-2. 对齐目标风格：明确该风格的语言特征（语气、人称、句式、节奏、标签习惯）。
-3. 改写：只改表达，不改事实、不改内容方向。
-4. 自检：是否丢失了核心事实、卖点或内容方向？是否新增了未提供的事实？是否出现了亲历表述？
-5. 重新评分：按评分规则给出新的五个维度、total、strength 与 improvement。
+Step 1 理解原文：提取核心事实、核心卖点与内容方向；明确它属于哪种内容方向（写作策略）。
+Step 2 对齐目标风格：按写作规范第 8 条，确定该风格应有的开头、组织方式、句式、信息密度、视角与结尾。
+Step 3 改写：事实与内容方向不变，**写作策略按目标风格重建**。
+Step 4 事实自检与回改（**发现即改**）：是否丢失核心事实或卖点？是否新增了未提供的事实（含感官事实、营养/成分/物理特性）？是否出现个人体验或借他人之口制造的体验？是否把品类通用常识当成了本产品的事实？
+　　**命中即改正文，不得只写进 improvement；改完再核对一遍。**
+Step 5 原生感自检与回改（**发现即改**）：像真人发的吗？有没有模板词或"同一语义只换说法"的模板？有没有空泛形容词？有没有机械总结段？
+　　**命中即改正文；改完再核对一遍。**
+Step 6 重新评分：**只有 Step 4 与 Step 5 全部通过后才进入本步**。按评分标准给出新的五个维度、total、strength 与 improvement。
 
 # Output
 只输出一个 JSON 对象，"notes" 有且仅有 1 篇：

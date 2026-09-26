@@ -22,13 +22,14 @@ import { describeAllocationMismatch } from '../../shared/allocation.js'
 import { INFORMATION_FALLBACK, INFORMATION_STATUS_VALUES } from '../../shared/constants.js'
 import type { InformationStatus } from '../../shared/constants.js'
 import type { Style } from '../../shared/enums.js'
-import type { Information, Note, Score } from '../../shared/types.js'
+import type { AiNote, Information, Score } from '../../shared/types.js'
 import { validateNotesResult, validateScore } from '../../shared/validation.js'
 
 /** 结构化处理后的产出（对应成功响应体） */
 export interface StructuredNotes {
   information: Information
-  notes: Note[]
+  /** AI 原始输出的笔记（id 与 stale 由 route 层补齐） */
+  notes: AiNote[]
 }
 
 /**
@@ -55,6 +56,13 @@ export interface StructuredNotesOptions {
   allowedStyles: readonly Style[]
   /** 程序计算的风格分配表 */
   allocation: Allocation
+  /**
+   * 内容策略中的角度 id 集合：每篇的 angle_id 必须能对应上。
+   *
+   * ⚠️ Phase 1 暂时可选：此时 Prompt 尚未产出 strategy/angles（Phase 3/4 才接入）。
+   *    Phase 4 起所有调用点**必须**传入，届时本字段改为必填。
+   */
+  angleIds?: ReadonlySet<string>
 }
 
 /**
@@ -105,6 +113,7 @@ export function interpretNotesText(
   const notes = validateNotesResult(parsed.value.notes, {
     expectedCount: options.expectedCount,
     allowedStyles: options.allowedStyles,
+    angleIds: options.angleIds,
   })
   if (!notes.ok) {
     const reason = notes.error.message
