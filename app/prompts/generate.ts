@@ -76,6 +76,7 @@ ${NO_FABRICATION_RULES}
 【标签与内容方向】
 5. ${HASHTAG_RULE_TEXT}
 6. ${CONTENT_DIRECTIONS_RULE_TEXT}
+   - 若 <program_data> 中 preferred_content_directions 非空，每篇的 "content_directions" 必须**优先从中选择**；不要使用该列表之外的方向。
 
 【评分】
 7. ${SCORE_POSITION_TEXT}
@@ -146,6 +147,7 @@ export function buildGeneratePrompt(input: GenerateInput, allocation: Allocation
     style_allocation_text: formatAllocation(allocation),
     allowed_styles: STYLES,
     allowed_content_directions: CONTENT_DIRECTIONS,
+    preferred_content_directions: input.content_directions_preference,
     allowed_goals: CONTENT_GOALS,
     requested_goal: input.goal,
   }

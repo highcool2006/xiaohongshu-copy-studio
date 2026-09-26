@@ -293,6 +293,20 @@ export function validateGenerateInput(raw: unknown): ValidationResult<GenerateIn
   const referenceText = validateOptionalText(raw.reference_text, 'reference_text', REFERENCE_TEXT_MAX_LENGTH)
   if (!referenceText.ok) return referenceText
 
+  // 期望的内容方向（可选）：必须全部落在 8 个方向枚举内
+  const rawPreference = raw.content_directions_preference
+  let directionsPreference: ContentDirection[] = []
+  if (rawPreference !== undefined && rawPreference !== null) {
+    if (
+      !Array.isArray(rawPreference) ||
+      rawPreference.length > CONTENT_DIRECTIONS_MAX_ITEMS ||
+      !rawPreference.every(isContentDirection)
+    ) {
+      return failure('INVALID_INPUT', MESSAGES.contentDirectionsRequired, 'content_directions')
+    }
+    directionsPreference = [...new Set(rawPreference)]
+  }
+
   return {
     ok: true,
     value: {
@@ -303,6 +317,7 @@ export function validateGenerateInput(raw: unknown): ValidationResult<GenerateIn
       target_users: targetUsers.value,
       scenarios: scenarios.value,
       goal: goal.value,
+      content_directions_preference: directionsPreference,
       ...(category.value === undefined ? {} : { product_category: category.value }),
       ...(additionalInfo.value === undefined ? {} : { additional_info: additionalInfo.value }),
       ...(referenceText.value === undefined ? {} : { reference_text: referenceText.value }),

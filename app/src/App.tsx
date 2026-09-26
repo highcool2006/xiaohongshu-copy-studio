@@ -1,28 +1,47 @@
 /**
- * 单页面外壳：页头身份层 + 左右工作区。
+ * 工作台外壳：顶部导航 + 视图切换 + 底部状态栏。
  *
- * 页面结构见 docs/页面结构方案.md：单页、无路由、无页脚、无导航。
- * 本阶段只接通「输入 → /api/generate → 结果展示」这一条链路。
+ * 不引入 react-router，用 activeView 轻量切换（依据 V2 决策）。
  */
 
-import { InputPanel } from './components/InputPanel'
 import { ResultPanel } from './components/ResultPanel'
-import { AppProvider } from './state/AppProvider'
+import { SetupPanel } from './components/SetupPanel'
+import { StatusBar } from './components/StatusBar'
+import { WorkbenchNav } from './components/WorkbenchNav'
+import { AppProvider, useApp } from './state/AppProvider'
+import { AssetsView } from './views/AssetsView'
+import { ReviewView } from './views/ReviewView'
+import { StyleLibraryView } from './views/StyleLibraryView'
+
+function Shell() {
+  const { state } = useApp()
+
+  return (
+    <div className="app">
+      <WorkbenchNav />
+
+      {state.activeView === 'workbench' ? (
+        <main className="app-main">
+          <SetupPanel />
+          <ResultPanel />
+        </main>
+      ) : (
+        <main className="app-main app-main-single">
+          {state.activeView === 'style-library' && <StyleLibraryView />}
+          {state.activeView === 'review' && <ReviewView />}
+          {state.activeView === 'assets' && <AssetsView />}
+        </main>
+      )}
+
+      <StatusBar />
+    </div>
+  )
+}
 
 export default function App() {
   return (
     <AppProvider>
-      <div className="app">
-        <header className="app-header">
-          <h1 className="app-title">小红书爆款文案工坊</h1>
-          <p className="app-tagline">输入产品和卖点，批量生成不同风格的小红书种草笔记</p>
-        </header>
-
-        <main className="app-main">
-          <InputPanel />
-          <ResultPanel />
-        </main>
-      </div>
+      <Shell />
     </AppProvider>
   )
 }

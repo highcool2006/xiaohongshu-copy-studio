@@ -34,11 +34,20 @@ export async function requestGenerate(input: GenerateInput): Promise<GenerateApi
     return { ok: true, value: getMockGenerateResponse(input) }
   }
 
+  // V2：请求体必须与后端 validateGenerateInput 的认识一致。
+  // 可选项为 undefined 时 JSON.stringify 会省略该键，正好符合契约（这些字段均为可选）。
   const result = await postJson('/api/generate', {
     product: input.product,
     selling_points: input.selling_points,
     styles: input.styles,
     count: input.count,
+    product_category: input.product_category,
+    additional_info: input.additional_info,
+    target_users: input.target_users,
+    scenarios: input.scenarios,
+    goal: input.goal,
+    reference_text: input.reference_text,
+    content_directions_preference: input.content_directions_preference,
   })
   if (!result.ok) {
     return result

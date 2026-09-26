@@ -1,11 +1,13 @@
 /**
- * 状态容器 + 操作编排。
+ * 状态容器 + 操作编排（V2 工作台）。
  *
  * 层次：UI 组件 → **本文件（状态 + 流程）** → api/* → shared 校验/类型
  *
  * 业务规则全部来自 app/shared，本文件不复制任何规则：
  *   - 一次标出全部字段错误 → collectGenerateInputFieldErrors（shared）
  *   - 提交前的权威归一化   → validateGenerateInput（shared）
+ *
+ * 调用次数纪律：一次操作 = 一次 AI 请求（生成 / 重写 / 评分 / 发布前检查 / 标题变体各一次）。
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react'
@@ -15,10 +17,12 @@ import {
   collectGenerateInputFieldErrors,
   validateGenerateInput,
 } from '../../shared/validation'
+import { requestCompliance } from '../api/compliance'
 import { requestGenerate } from '../api/generate'
 import type { FrontendApiError } from '../api/http'
 import { requestRewrite } from '../api/rewrite'
 import { requestScore } from '../api/score'
+import { requestTitleVariants } from '../api/titleVariants'
 import { buildCopyText } from '../lib/copyText'
 import {
   appReducer,
@@ -26,7 +30,7 @@ import {
   initialAppState,
   parseSellingPoints,
 } from './appState'
-import type { AppAction, AppState, FormField } from './appState'
+import type { ActiveView, AppAction, AppState, FormField } from './appState'
 
 /** 后端字段名（snake_case）→ 表单字段名，用于把行内错误落到对应输入框 */
 const BACKEND_FIELD_TO_FORM_FIELD: Partial<Record<string, FormField>> = {
@@ -36,8 +40,15 @@ const BACKEND_FIELD_TO_FORM_FIELD: Partial<Record<string, FormField>> = {
   count: 'count',
 }
 
-/** 复制反馈的复位延时（毫秒） */
 const COPY_FEEDBACK_MS = 2000
+
+/**
+ * 提交时使用的卖点：已确认的标签 + 输入框里尚未回车的内容。
+ * 这样用户即使忘了按回车，也不会丢失刚写下的卖点。
+ */
+function effectiveSellingPoints(profile: AppState['profile']): string[] {
+  return [...new Set([...profile.sellingPoints, ...parseSellingPoints(profile.sellingPointDraft)])]
+}
 
 function mapFieldErrors(
   source: Partial<Record<'product' | 'selling_points' | 'styles' | 'count', string>>,
@@ -55,25 +66,24 @@ function mapFieldErrors(
 interface AppContextValue {
   state: AppState
   dispatch: Dispatch<AppAction>
-  /** 批量生成 */
+  setActiveView: (view: ActiveView) => void
   submitGenerate: () => Promise<void>
-  /** 对某张卡片执行换风格重写（重试时复用已保存的 targetStyle） */
   submitRewrite: (localId: string) => Promise<void>
-  /** 对某张卡片重新评分 */
   submitScore: (localId: string) => Promise<void>
-  /** 按卡片上记录的错误来源，重跑对应操作 */
+  submitComplianceCheck: (localId: string) => Promise<void>
+  submitTitleVariants: (localId: string) => Promise<void>
   retryCard: (localId: string) => Promise<void>
-  /** 复制该卡片的当前内容 */
   copyNote: (localId: string) => Promise<void>
+  /** 批量复制选中项（未选中任何项时复制当前筛选结果） */
+  copySelected: () => Promise<void>
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialAppState)
-  const { product, sellingPointDraft, styles, count } = state.form
+  const { profile } = state
 
-  /** 复制反馈的定时器；卸载时清理，避免残留回调 */
   const copyTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   useEffect(() => {
     const timers = copyTimers.current
@@ -85,14 +95,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  /* ---------- 视图 ---------- */
+
+  const setActiveView = useCallback((view: ActiveView) => {
+    dispatch({ type: 'SET_ACTIVE_VIEW', view })
+  }, [])
+
   /* ---------- 批量生成 ---------- */
 
   const submitGenerate = useCallback(async (): Promise<void> => {
+    const sellingPoints = effectiveSellingPoints(profile)
     const candidate = {
-      product,
-      selling_points: parseSellingPoints(sellingPointDraft),
-      styles,
-      count,
+      product: profile.product,
+      selling_points: sellingPoints,
+      styles: profile.styles,
+      count: profile.count,
+      product_category: profile.category,
+      additional_info: profile.additionalInfo,
+      target_users: profile.targetUsers,
+      scenarios: profile.scenarios,
+      goal: profile.goal,
+      reference_text: profile.referenceText,
+      content_directions_preference: profile.directions,
     }
 
     // 1. 一次标出全部字段错误；只要有一条就不发请求
@@ -102,7 +126,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // 2. 用共享的权威校验器做归一化（count 取默认值、styles 按固定顺序）
+    // 2. 用共享的权威校验器做归一化（count 取默认值、styles 按固定顺序、可选字段去空）
     const validated = validateGenerateInput(candidate)
     if (!validated.ok) {
       const formField = validated.error.field
@@ -115,15 +139,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // 3. 请求
+    // 3. 请求（真实耗时会被记录，用于结果区显示）
     dispatch({ type: 'GENERATE_START' })
+    const startedAt = Date.now()
     const result = await requestGenerate(validated.value)
+    const durationMs = Date.now() - startedAt
 
     if (result.ok) {
       dispatch({
         type: 'GENERATE_SUCCESS',
         information: result.value.information,
+        strategy: result.value.strategy,
         notes: result.value.notes.map((note) => ({ ...note, localId: createLocalId() })),
+        durationMs,
       })
       return
     }
@@ -135,27 +163,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'VALIDATION_FAILED', errors: { [formField]: error.message } })
       return
     }
-    dispatch({ type: 'GENERATE_FAILURE', error })
-  }, [product, sellingPointDraft, styles, count])
+    dispatch({ type: 'GENERATE_FAILURE', error, durationMs })
+  }, [profile])
 
-  /* ---------- 单篇换风格重写 ---------- */
+  /* ---------- 卡片级操作 ---------- */
 
   const submitRewrite = useCallback(
     async (localId: string): Promise<void> => {
       const card = state.cards[localId]
       const note = state.notes.find((item) => item.localId === localId)
-      if (card === undefined || note === undefined || card.targetStyle === null) {
-        return
-      }
-      if (card.status !== 'idle') {
+      if (card === undefined || note === undefined || card.targetStyle === null || card.status !== 'idle') {
         return
       }
 
       dispatch({ type: 'CONFIRM_REWRITE', localId })
       const result = await requestRewrite({
-        product,
-        selling_points: parseSellingPoints(sellingPointDraft),
+        product: profile.product,
+        selling_points: effectiveSellingPoints(profile),
         target_style: card.targetStyle,
+        angle_id: note.angle_id,
         current_note: {
           title: note.title,
           body: note.body,
@@ -171,10 +197,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'REWRITE_FAILURE', localId, error: result.error })
       }
     },
-    [state.cards, state.notes, product, sellingPointDraft],
+    [state.cards, state.notes, profile],
   )
-
-  /* ---------- 重新评分 ---------- */
 
   const submitScore = useCallback(
     async (localId: string): Promise<void> => {
@@ -190,8 +214,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         body: note.body,
         style: note.style,
         content_directions: note.content_directions,
-        product,
-        selling_points: parseSellingPoints(sellingPointDraft),
+        product: profile.product,
+        selling_points: effectiveSellingPoints(profile),
       })
 
       if (result.ok) {
@@ -200,24 +224,96 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SCORE_FAILURE', localId, error: result.error })
       }
     },
-    [state.cards, state.notes, product, sellingPointDraft],
+    [state.cards, state.notes, profile],
   )
 
-  /* ---------- 卡片级重试 ---------- */
+  const submitComplianceCheck = useCallback(
+    async (localId: string): Promise<void> => {
+      const card = state.cards[localId]
+      const note = state.notes.find((item) => item.localId === localId)
+      if (card === undefined || note === undefined || card.status !== 'idle') {
+        return
+      }
+
+      dispatch({ type: 'REQUEST_COMPLIANCE', localId })
+      const result = await requestCompliance({
+        title: note.title,
+        body: note.body,
+        hashtags: note.hashtags,
+        product: profile.product,
+        selling_points: effectiveSellingPoints(profile),
+      })
+
+      if (result.ok) {
+        dispatch({ type: 'COMPLIANCE_SUCCESS', localId, compliance: result.value })
+      } else {
+        dispatch({ type: 'COMPLIANCE_FAILURE', localId, error: result.error })
+      }
+    },
+    [state.cards, state.notes, profile],
+  )
+
+  const submitTitleVariants = useCallback(
+    async (localId: string): Promise<void> => {
+      const card = state.cards[localId]
+      const note = state.notes.find((item) => item.localId === localId)
+      if (card === undefined || note === undefined || card.status !== 'idle') {
+        return
+      }
+
+      dispatch({ type: 'REQUEST_TITLE_VARIANTS', localId })
+      const result = await requestTitleVariants({
+        title: note.title,
+        body: note.body,
+        style: note.style,
+        content_directions: note.content_directions,
+        product: profile.product,
+        selling_points: effectiveSellingPoints(profile),
+      })
+
+      if (result.ok) {
+        dispatch({ type: 'TITLE_VARIANTS_SUCCESS', localId, variants: result.value })
+      } else {
+        dispatch({ type: 'TITLE_VARIANTS_FAILURE', localId, error: result.error })
+      }
+    },
+    [state.cards, state.notes, profile],
+  )
 
   const retryCard = useCallback(
     async (localId: string): Promise<void> => {
       const action = state.cards[localId]?.errorAction
-      if (action === 'rewrite') {
-        await submitRewrite(localId)
-      } else if (action === 'score') {
-        await submitScore(localId)
-      }
+      if (action === 'rewrite') await submitRewrite(localId)
+      else if (action === 'score') await submitScore(localId)
+      else if (action === 'compliance') await submitComplianceCheck(localId)
+      else if (action === 'variants') await submitTitleVariants(localId)
     },
-    [state.cards, submitRewrite, submitScore],
+    [state.cards, submitRewrite, submitScore, submitComplianceCheck, submitTitleVariants],
   )
 
   /* ---------- 复制 ---------- */
+
+  const writeClipboard = useCallback(async (localId: string, text: string): Promise<void> => {
+    let value: 'copied' | 'failed' = 'copied'
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      value = 'failed'
+    }
+    dispatch({ type: 'SET_COPY_FEEDBACK', localId, value })
+
+    const previous = copyTimers.current.get(localId)
+    if (previous !== undefined) {
+      clearTimeout(previous)
+    }
+    copyTimers.current.set(
+      localId,
+      setTimeout(() => {
+        copyTimers.current.delete(localId)
+        dispatch({ type: 'RESET_COPY_FEEDBACK', localId })
+      }, COPY_FEEDBACK_MS),
+    )
+  }, [])
 
   const copyNote = useCallback(
     async (localId: string): Promise<void> => {
@@ -225,33 +321,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (note === undefined) {
         return
       }
-
-      let value: 'copied' | 'failed' = 'copied'
-      try {
-        await navigator.clipboard.writeText(buildCopyText(note))
-      } catch {
-        value = 'failed'
-      }
-      dispatch({ type: 'SET_COPY_FEEDBACK', localId, value })
-
-      const previous = copyTimers.current.get(localId)
-      if (previous !== undefined) {
-        clearTimeout(previous)
-      }
-      copyTimers.current.set(
-        localId,
-        setTimeout(() => {
-          copyTimers.current.delete(localId)
-          dispatch({ type: 'RESET_COPY_FEEDBACK', localId })
-        }, COPY_FEEDBACK_MS),
-      )
+      await writeClipboard(localId, buildCopyText(note))
     },
-    [state.notes],
+    [state.notes, writeClipboard],
   )
 
+  const copySelected = useCallback(async (): Promise<void> => {
+    const ids = state.selected.length > 0 ? state.selected : state.notes.map((note) => note.localId)
+    const targets = state.notes.filter((note) => ids.includes(note.localId))
+    if (targets.length === 0) {
+      return
+    }
+    // 批量复制：合并为一段文本，便于一次性粘出
+    await writeClipboard(
+      targets[0]!.localId,
+      targets.map((note) => buildCopyText(note)).join('\n\n---\n\n'),
+    )
+  }, [state.selected, state.notes, writeClipboard])
+
   const value = useMemo<AppContextValue>(
-    () => ({ state, dispatch, submitGenerate, submitRewrite, submitScore, retryCard, copyNote }),
-    [state, submitGenerate, submitRewrite, submitScore, retryCard, copyNote],
+    () => ({
+      state,
+      dispatch,
+      setActiveView,
+      submitGenerate,
+      submitRewrite,
+      submitScore,
+      submitComplianceCheck,
+      submitTitleVariants,
+      retryCard,
+      copyNote,
+      copySelected,
+    }),
+    [
+      state,
+      setActiveView,
+      submitGenerate,
+      submitRewrite,
+      submitScore,
+      submitComplianceCheck,
+      submitTitleVariants,
+      retryCard,
+      copyNote,
+      copySelected,
+    ],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

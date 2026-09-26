@@ -224,6 +224,7 @@ export function getMockGenerateResponse(input: GenerateInput): GenerateResponse 
   const scenario = input.scenarios.length > 0 ? input.scenarios.join('、') : '（建议场景）日常使用'
 
   const allocation = allocateStyles(input.styles, input.count)
+  const preferredDirections = input.content_directions_preference
 
   const angles: ContentAngle[] = []
   const notes: Note[] = []
@@ -254,7 +255,11 @@ export function getMockGenerateResponse(input: GenerateInput): GenerateResponse 
         body: fill(template.body, product, points),
         hashtags: template.hashtags.map((tag) => fill(tag, product, points)),
         style,
-        content_directions: [...template.content_directions],
+        // 若用户指定了期望方向，则优先用他选的方向（按索引轮换），否则用模板自带的方向
+        content_directions:
+          preferredDirections.length > 0
+            ? [preferredDirections[(index - 1) % preferredDirections.length]!]
+            : [...template.content_directions],
         angle_id: id,
         score: { ...template.score },
         ai_ness: { ...template.ai_ness, issues: [...template.ai_ness.issues], suggestions: [...template.ai_ness.suggestions] },

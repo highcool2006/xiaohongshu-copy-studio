@@ -1,8 +1,11 @@
 /**
  * /api/rewrite 的前端调用封装（单篇换风格重写）。
  *
- * 契约：请求带 product / selling_points / target_style / current_note；
+ * 契约：请求带 product / selling_points / target_style / current_note / angle_id（可选）；
  *       成功响应 { notes: [note] } —— 长度固定为 1。
+ *
+ * ⚠️ 本类型是 shared `RewriteRequest` 的前端侧精简版，字段必须与之一致：
+ *    后端用 validateRewriteInput 做权威校验，多传/少传都会导致契约不一致。
  */
 
 import type { ContentDirection, Style } from '../../shared/enums'
@@ -23,6 +26,13 @@ export interface RewritePayload {
     content_directions: ContentDirection[]
     style: Style
   }
+  /**
+   * 原笔记的创作角度 id（对应 shared `RewriteRequest.angle_id`）。
+   *
+   * 重写要保持「这一篇讲的是哪一件事」不变，因此前端传当前 note 的 angle_id；
+   * 后端以程序传入的值为准，并用它回填重写后的 note。
+   */
+  angle_id?: string
 }
 
 export type RewriteApiResult =

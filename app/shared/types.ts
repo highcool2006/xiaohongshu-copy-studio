@@ -160,6 +160,8 @@ export interface GenerateRequest {
   scenarios?: string[]
   goal?: ContentGoal
   reference_text?: string
+  /** 期望的内容方向（可多选）；提供时 AI 应优先从中选择 */
+  content_directions_preference?: ContentDirection[]
 }
 
 /** 校验并归一化之后的生成输入 */
@@ -171,6 +173,8 @@ export interface GenerateInput {
   target_users: string[]
   scenarios: string[]
   goal: ContentGoal
+  /** 空数组表示不限定方向，由 AI 自行规划 */
+  content_directions_preference: ContentDirection[]
   product_category?: string
   additional_info?: string
   reference_text?: string

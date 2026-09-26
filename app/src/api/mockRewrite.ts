@@ -38,6 +38,7 @@ const STYLE_CLOSERS: Record<Style, string> = {
  *
  * - `style` 等于 target_style
  * - 保留原文案的正文事实、话题标签、内容方向
+ * - `angle_id`：以**程序传入**的值为准（与后端 RewriteRequest 的语义一致），未提供时沿用 Mock 的角度
  * - 评分由 mockScore 重新生成（不是复制旧分数）
  */
 export function getMockRewriteResponse(payload: RewritePayload): GenerateResponse['notes'] {
@@ -48,7 +49,8 @@ export function getMockRewriteResponse(payload: RewritePayload): GenerateRespons
   // 评分针对**重写后**的内容重新生成（不是复制旧分数）
   const score = getMockScore({ title, body, style: targetStyle })
 
-  // 借一份 Mock 的其它字段（ai_ness / compliance / cover_suggestion），保证结构与真实响应一致
+  // 借一份 Mock 的其它字段（ai_ness / compliance / cover_suggestion），保证结构与真实响应一致。
+  // 这里必须传**完整**的 GenerateInput（V2 起 content_directions_preference 为必填字段）。
   const base = getMockGenerateResponse({
     product: payload.product,
     selling_points: payload.selling_points,
@@ -57,6 +59,7 @@ export function getMockRewriteResponse(payload: RewritePayload): GenerateRespons
     target_users: [],
     scenarios: [],
     goal: '种草',
+    content_directions_preference: [],
   }).notes[0]!
 
   return [
@@ -68,7 +71,8 @@ export function getMockRewriteResponse(payload: RewritePayload): GenerateRespons
       hashtags: [...current.hashtags],
       style: targetStyle,
       content_directions: [...current.content_directions],
-      angle_id: base.angle_id,
+      // 后端规则：程序传入的 angle_id 优先，未传时才回落到 AI/Mock 的值
+      angle_id: payload.angle_id ?? base.angle_id,
       score,
       stale: false,
     },
