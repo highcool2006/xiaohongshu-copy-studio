@@ -2281,6 +2281,216 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- 数据看板 / 内容复盘 ---------- */
+
+/* 第一层：核心指标卡 */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--gap-2);
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* 第二、三层：内容块 */
+.review-block {
+  padding: var(--gap-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.review-block-title {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.review-muted {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.review-block .review-muted:first-of-type {
+  margin-top: 0;
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--gap-3);
+}
+
+.review-score {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.review-score-max {
+  margin-left: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+/* 趋势合计 */
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-2) var(--gap-5);
+  margin-bottom: var(--gap-3);
+}
+
+.trend-legend-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.trend-legend-key {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.trend-legend-value {
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  /* 固定布局：日期列定宽，其余各列等分（否则表头文字长短会把列宽拉歪） */
+  table-layout: fixed;
+}
+
+.trend-table th:first-child,
+.trend-table td:first-child {
+  width: 88px;
+}
+
+.trend-table th,
+.trend-table td {
+  padding: 7px 0;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-table thead th {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.trend-table tbody tr + tr th,
+.trend-table tbody tr + tr td {
+  border-top: 1px solid var(--border-hairline);
+}
+
+.trend-table tbody th {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* 当天真有操作时加深，便于一眼看出活跃日 */
+.trend-cell-active {
+  font-weight: 650;
+  color: var(--text);
+}
+
+/* 分布条（纯 CSS，不引入图表库） */
+.dist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dist-item {
+  display: grid;
+  grid-template-columns: minmax(64px, auto) 1fr auto;
+  align-items: center;
+  gap: var(--gap-2);
+  font-size: 12.5px;
+}
+
+.dist-key {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.dist-bar {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  overflow: hidden;
+}
+
+.dist-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+}
+
+.dist-value {
+  min-width: 24px;
+  text-align: right;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.risk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.risk-item {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  font-size: 12.5px;
+}
+
+.risk-count {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- 资产库 ---------- */
 
 .assets-loading {

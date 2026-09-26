@@ -10,7 +10,7 @@
  * 调用次数纪律：一次操作 = 一次 AI 请求（生成 / 重写 / 评分 / 发布前检查 / 标题变体各一次）。
  */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { Dispatch, ReactNode } from 'react'
 
 import {
@@ -25,6 +25,13 @@ import { requestReferenceAnalyze } from '../api/referenceAnalyze'
 import { requestRewrite } from '../api/rewrite'
 import { requestScore } from '../api/score'
 import { requestTitleVariants } from '../api/titleVariants'
+import {
+  EMPTY_COUNTERS,
+  loadAnalytics,
+  persistAnalytics,
+  recordEvent,
+} from '../lib/analyticsStorage'
+import type { AnalyticsEvent, AnalyticsState } from '../lib/analyticsStorage'
 import {
   computeAssetId,
   loadAssets,
@@ -92,6 +99,10 @@ interface AppContextValue {
   isNoteSaved: (localId: string) => boolean
   /** 从资产库删除一条资产 */
   deleteAsset: (assetId: string) => void
+  /** 采用某个标题变体（同时计入标题采用次数） */
+  applyTitleVariant: (localId: string, title: string) => void
+  /** 本地内容生产统计（真实操作记录，随 localStorage 持久化） */
+  analytics: AnalyticsState
   retryCard: (localId: string) => Promise<void>
   copyNote: (localId: string) => Promise<void>
   /** 批量复制选中项（未选中任何项时复制当前筛选结果） */
@@ -103,6 +114,31 @@ const AppContext = createContext<AppContextValue | null>(null)
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialAppState)
   const { profile } = state
+
+  /* ---------- 本地生产统计（只记真实操作，不改业务 reducer 语义） ---------- */
+
+  const [analytics, setAnalytics] = useState<AnalyticsState>(() => ({
+    totals: { ...EMPTY_COUNTERS },
+    daily: [],
+  }))
+
+  useEffect(() => {
+    setAnalytics(loadAnalytics())
+  }, [])
+
+  /**
+   * 记录一次真实操作：先算新状态、再落盘、最后更新内存。
+   * 写成函数式更新，因此 `track` 的引用永远稳定，不会引起下游 callback 重建。
+   */
+  const track = useCallback((event: AnalyticsEvent): void => {
+    setAnalytics((previous) => {
+      const next = recordEvent(previous, event)
+      if (!persistAnalytics(next)) {
+        console.warn('[统计] 写入 localStorage 失败：本次统计仅在当前会话内有效')
+      }
+      return next
+    })
+  }, [])
 
   const copyTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   useEffect(() => {
@@ -173,6 +209,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         notes: result.value.notes.map((note) => ({ ...note, localId: createLocalId() })),
         durationMs,
       })
+      track({ type: 'generate', notes: result.value.notes.length })
       return
     }
 
@@ -184,7 +221,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return
     }
     dispatch({ type: 'GENERATE_FAILURE', error, durationMs })
-  }, [profile])
+  }, [profile, track])
 
   /* ---------- 卡片级操作 ---------- */
 
@@ -213,11 +250,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (result.ok) {
         dispatch({ type: 'REWRITE_SUCCESS', localId, note: result.value })
+        track({ type: 'rewrite' })
       } else {
         dispatch({ type: 'REWRITE_FAILURE', localId, error: result.error })
       }
     },
-    [state.cards, state.notes, profile],
+    [state.cards, state.notes, profile, track],
   )
 
   const submitScore = useCallback(
@@ -240,11 +278,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (result.ok) {
         dispatch({ type: 'SCORE_SUCCESS', localId, score: result.value })
+        track({ type: 'score' })
       } else {
         dispatch({ type: 'SCORE_FAILURE', localId, error: result.error })
       }
     },
-    [state.cards, state.notes, profile],
+    [state.cards, state.notes, profile, track],
   )
 
   const submitComplianceCheck = useCallback(
@@ -266,11 +305,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (result.ok) {
         dispatch({ type: 'COMPLIANCE_SUCCESS', localId, compliance: result.value })
+        track({ type: 'compliance' })
       } else {
         dispatch({ type: 'COMPLIANCE_FAILURE', localId, error: result.error })
       }
     },
-    [state.cards, state.notes, profile],
+    [state.cards, state.notes, profile, track],
   )
 
   const submitTitleVariants = useCallback(
@@ -297,11 +337,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (result.ok) {
         dispatch({ type: 'TITLE_VARIANTS_SUCCESS', localId, variants: result.value })
+        track({ type: 'title_experiment' })
       } else {
         dispatch({ type: 'TITLE_VARIANTS_FAILURE', localId, error: result.error })
       }
     },
-    [state.cards, state.notes, state.strategy, profile],
+    [state.cards, state.notes, state.strategy, profile, track],
+  )
+
+  /** 采用标题变体：先记录次数，再改标题 */
+  const applyTitleVariant = useCallback(
+    (localId: string, title: string): void => {
+      dispatch({ type: 'APPLY_TITLE_VARIANT', localId, title })
+      track({ type: 'title_apply' })
+    },
+    [track],
   )
 
   /* ---------- 资产库（localStorage 持久化） ---------- */
@@ -356,8 +406,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.warn('[资产库] 写入 localStorage 失败：本次保存仅在当前会话内有效')
       }
       dispatch({ type: 'ASSET_SAVED', asset })
+      track({ type: 'save_asset' })
     },
-    [state.notes, state.cards, state.assets, profile],
+    [state.notes, state.cards, state.assets, profile, track],
   )
 
   const isNoteSaved = useCallback(
@@ -379,8 +430,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.warn('[资产库] 删除后写入 localStorage 失败：刷新后该资产可能重新出现')
       }
       dispatch({ type: 'ASSET_DELETED', assetId })
+      track({ type: 'delete_asset' })
     },
-    [state.assets],
+    [state.assets, track],
   )
 
   /* ---------- 参考文案分析（用户主动触发，与生成流程相互独立） ---------- */
@@ -427,6 +479,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value = 'failed'
     }
     dispatch({ type: 'SET_COPY_FEEDBACK', localId, value })
+    // 只统计真正复制成功的操作（批量复制算 1 次）
+    if (value === 'copied') {
+      track({ type: 'copy' })
+    }
 
     const previous = copyTimers.current.get(localId)
     if (previous !== undefined) {
@@ -439,7 +495,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'RESET_COPY_FEEDBACK', localId })
       }, COPY_FEEDBACK_MS),
     )
-  }, [])
+  }, [track])
 
   const copyNote = useCallback(
     async (localId: string): Promise<void> => {
@@ -479,6 +535,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveNoteToAssets,
       isNoteSaved,
       deleteAsset,
+      applyTitleVariant,
+      analytics,
       retryCard,
       copyNote,
       copySelected,
@@ -495,6 +553,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveNoteToAssets,
       isNoteSaved,
       deleteAsset,
+      applyTitleVariant,
+      analytics,
       retryCard,
       copyNote,
       copySelected,

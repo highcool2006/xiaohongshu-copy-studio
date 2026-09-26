@@ -42,6 +42,7 @@ export function NoteCard({ note }: { note: NoteWithId }) {
     submitTitleVariants,
     saveNoteToAssets,
     isNoteSaved,
+    applyTitleVariant,
     retryCard,
     copyNote,
   } = useApp()
@@ -286,6 +287,7 @@ export function NoteCard({ note }: { note: NoteWithId }) {
                   <button
                     type="button"
                     className="card-button card-button-small"
+                    // 切回原标题走 dispatch：它不属于「采用标题变体」，不计入标题采用次数
                     onClick={() =>
                       dispatch({ type: 'APPLY_TITLE_VARIANT', localId: note.localId, title: originalTitle })
                     }
@@ -310,9 +312,7 @@ export function NoteCard({ note }: { note: NoteWithId }) {
                     <button
                       type="button"
                       className="card-button card-button-small"
-                      onClick={() =>
-                        dispatch({ type: 'APPLY_TITLE_VARIANT', localId: note.localId, title: variant.title })
-                      }
+                      onClick={() => applyTitleVariant(note.localId, variant.title)}
                     >
                       采用
                     </button>
