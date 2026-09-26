@@ -40,6 +40,25 @@ export function toJsonDataBlock(tag: string, value: unknown): string {
   return `<${tag}>\n${json}\n</${tag}>`
 }
 
+/* ---------- D8 重试消息 ---------- */
+
+/**
+ * D8 重试：把上一次失败的原因反馈给模型。
+ *
+ * 只替换 **user** 消息，system 保持不变。
+ * `failureReason` 来自我们自己的校验结论（不是用户输入），因此不存在注入风险。
+ */
+export function buildRetryUserMessage(baseUser: string, failureReason: string): string {
+  return [
+    baseUser,
+    '',
+    '---',
+    '## 重试要求',
+    `上一次的输出未被接受，原因：${failureReason}`,
+    '请严格按系统提示中的输出契约，重新输出**完整的** JSON 对象：不要只输出被修改的部分，也不要在 JSON 之外添加任何解释文字。',
+  ].join('\n')
+}
+
 /* ---------- 由 shared 动态生成的枚举与规则文本 ---------- */
 
 /** 允许的风格（由 STYLES 生成） */

@@ -51,6 +51,20 @@ export const CONTENT_DIRECTIONS_MAX_ITEMS = 8
 export const STRENGTH_MAX_LENGTH = 100
 export const IMPROVEMENT_MAX_LENGTH = 100
 
+/* ---------- 信息充分度（generate 的辅助提示字段） ---------- */
+
+export const INFORMATION_STATUS_VALUES = ['sufficient', 'limited'] as const
+
+export type InformationStatus = (typeof INFORMATION_STATUS_VALUES)[number]
+
+/**
+ * information 字段缺失或非法时的降级值。
+ *
+ * 该字段是**辅助字段**：异常时只降级为「不提示」，不判 SCHEMA_FAILED、不触发 D8 重试。
+ * 核心 notes 仍必须严格校验。
+ */
+export const INFORMATION_FALLBACK = { status: 'sufficient', message: '' } as const
+
 /* ---------- 错误类型 ---------- */
 
 export const ERROR_TYPES = [

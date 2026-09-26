@@ -5,14 +5,14 @@
  *
  * 关键约束：
  *   - 风格分配表由**程序**计算并传入，AI 不得自行决定各风格几篇
- *   - information_status 落在**本层的 AI 输出设计**中，用于提示信息充分度；
- *     它不阻止生成，也不等同于程序的硬性输入校验。
- *     （它在 API response 中的正式位置留待 SDK / API 契约阶段统一决定，
- *       本阶段不修改 app/shared 的类型。）
+ *   - information_status 是**辅助字段**，用于提示信息充分度：它不阻止生成，
+ *     也不等同于程序的硬性输入校验；异常时降级为「不提示」，不触发重试。
+ *     取值与类型来自 app/shared；对外 API 中映射为 information.{status,message}。
  */
 
 import { formatAllocation } from '../shared/allocation.js'
 import type { Allocation } from '../shared/allocation.js'
+import { INFORMATION_STATUS_VALUES } from '../shared/constants.js'
 import { CONTENT_DIRECTIONS, STYLES } from '../shared/enums.js'
 import type { GenerateInput } from '../shared/types.js'
 import {
@@ -30,12 +30,14 @@ import {
 } from './shared.js'
 import type { PromptMessages } from './shared.js'
 
-/* ---------- information_status（Prompt 层设计） ---------- */
+/* ---------- information_status ---------- */
 
-export const INFORMATION_STATUS_VALUES = ['sufficient', 'limited'] as const
-
-export type InformationStatus = (typeof INFORMATION_STATUS_VALUES)[number]
-
+/**
+ * 取值与类型来自 app/shared（单一事实来源），本层只负责把它写进 Prompt 的输出契约。
+ *
+ * AI 原始输出的顶层字段名为 information_status / information_message；
+ * 对外 API 响应中会被映射为 information.{status,message}（见 docs/技术架构决策.md 4.2 节）。
+ */
 const INFORMATION_STATUS_TEXT = INFORMATION_STATUS_VALUES.map((value) => `"${value}"`).join(' 或 ')
 
 /* ---------- System Prompt ---------- */

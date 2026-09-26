@@ -9,7 +9,7 @@
  *   - localId 由前端生成，不属于本文件的任何契约类型
  */
 
-import type { ErrorType } from './constants.js'
+import type { ErrorType, InformationStatus } from './constants.js'
 import type { ContentDirection, Style } from './enums.js'
 
 /* ---------- 领域数据 ---------- */
@@ -60,7 +60,20 @@ export interface GenerateInput {
   count: number
 }
 
+/**
+ * 「提供的信息是否足够丰富」的提示。**辅助字段**。
+ *
+ * 由 AI 在 generate 时给出；缺失或非法时降级为 INFORMATION_FALLBACK，
+ * **不参与严格 Schema 校验、不触发 D8 重试**。
+ */
+export interface Information {
+  status: InformationStatus
+  message: string
+}
+
 export interface GenerateResponse {
+  /** 辅助提示（前端展示位置：结果区信息条） */
+  information: Information
   notes: Note[]
 }
 
