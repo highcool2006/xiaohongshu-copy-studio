@@ -7,6 +7,7 @@
  * NodeNext 约定：本层内部与 server 侧引用均使用带 .js 后缀的相对路径。
  */
 
+export * from './compliance.js'
 export * from './generate.js'
 export * from './rewrite.js'
 export * from './score.js'

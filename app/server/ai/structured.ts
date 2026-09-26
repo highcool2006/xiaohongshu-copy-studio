@@ -22,8 +22,19 @@ import { describeAllocationMismatch } from '../../shared/allocation.js'
 import { INFORMATION_FALLBACK, INFORMATION_STATUS_VALUES } from '../../shared/constants.js'
 import type { InformationStatus } from '../../shared/constants.js'
 import type { Style } from '../../shared/enums.js'
-import type { AiNote, ContentStrategy, Information, Score } from '../../shared/types.js'
-import { validateNotesResult, validateScore, validateStrategy } from '../../shared/validation.js'
+import type {
+  AiNote,
+  ComplianceResult,
+  ContentStrategy,
+  Information,
+  Score,
+} from '../../shared/types.js'
+import {
+  validateCompliance,
+  validateNotesResult,
+  validateScore,
+  validateStrategy,
+} from '../../shared/validation.js'
 
 /** 结构化处理后的产出（对应成功响应体） */
 /** AI 输出的内容策略（diversity_report 由程序补齐） */
@@ -231,6 +242,54 @@ export function interpretScoreText(rawText: string): StructuredScoreResult {
   }
 
   return { ok: true, value: score.value }
+}
+
+/* ---------- Compliance（/api/compliance/check） ---------- */
+
+/** /api/compliance/check 的结构化产出 */
+export type StructuredComplianceResult =
+  | { ok: true; value: ComplianceResult }
+  | { ok: false; failure: StructuredFailure }
+
+/**
+ * 处理 compliance 的原始文本。
+ *
+ * 与 `processScoreResult` 同一风格：复用 `parseJsonObject` / `StructuredFailure` /
+ * D8 最多一次重试；只是校验目标不同。
+ */
+export async function processComplianceResult(
+  rawText: string,
+  retry: RetryRequester,
+): Promise<StructuredComplianceResult> {
+  const first = interpretComplianceText(rawText)
+  if (first.ok) {
+    return first
+  }
+  const retriedText = await retry(first.failure.retryReason)
+  return interpretComplianceText(retriedText)
+}
+
+/** 单次解释：预处理 → 解析 → Compliance 结构校验。不含重试逻辑。 */
+export function interpretComplianceText(rawText: string): StructuredComplianceResult {
+  const parsed = parseJsonObject(rawText)
+  if (!parsed.ok) {
+    return parsed
+  }
+
+  const compliance = validateCompliance(parsed.value.compliance)
+  if (!compliance.ok) {
+    const reason = compliance.error.message
+    return {
+      ok: false,
+      failure: {
+        type: 'SCHEMA_FAILED',
+        retryReason: `${reason}。请严格按输出契约重新给出完整的 compliance 对象（risk_level 取 low / medium / high，issues 与 suggestions 为字符串数组）。`,
+        detail: reason,
+      },
+    }
+  }
+
+  return { ok: true, value: compliance.value }
 }
 
 /* ---------- 预处理与解析 ---------- */

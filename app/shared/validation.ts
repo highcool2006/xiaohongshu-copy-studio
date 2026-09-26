@@ -512,7 +512,7 @@ export function validateComplianceCheckInput(raw: unknown): ValidationResult<{
   if (!isNonEmptyString(raw.body) || raw.body.trim().length > BODY_MAX_LENGTH) {
     return failure('INVALID_INPUT', MESSAGES.bodyRequired, 'body')
   }
-  const hashtags = validateHashtags(raw.hashtags)
+  const hashtags = validateHashtags(raw.hashtags, 'INVALID_INPUT')
   if (!hashtags.ok) return hashtags
   const product = validateProduct(raw.product)
   if (!product.ok) return product
@@ -533,23 +533,37 @@ export function validateComplianceCheckInput(raw: unknown): ValidationResult<{
 
 /* ---------- 结果结构校验（AI 返回内容的校验） ---------- */
 
-function validateHashtags(value: unknown): ValidationResult<string[]> {
+/**
+ * 话题标签校验。
+ *
+ * errorType 由调用方决定：作为**输入**校验时为 INVALID_INPUT（400 + field），
+ * 作为 **AI 结果**校验时为 SCHEMA_FAILED（502）。两处共用同一套规则。
+ */
+function validateHashtags(
+  value: unknown,
+  errorType: 'INVALID_INPUT' | 'SCHEMA_FAILED' = 'SCHEMA_FAILED',
+): ValidationResult<string[]> {
+  const field: ErrorField | undefined = errorType === 'INVALID_INPUT' ? 'hashtags' : undefined
   if (
     !Array.isArray(value) ||
     value.length < HASHTAG_MIN_ITEMS ||
     value.length > HASHTAG_MAX_ITEMS
   ) {
-    return failure('SCHEMA_FAILED', `话题标签数量需在 ${HASHTAG_MIN_ITEMS}～${HASHTAG_MAX_ITEMS} 个`)
+    return failure(
+      errorType,
+      `话题标签数量需在 ${HASHTAG_MIN_ITEMS}～${HASHTAG_MAX_ITEMS} 个`,
+      field,
+    )
   }
   const hashtags: string[] = []
   for (const item of value) {
     if (!isNonEmptyString(item) || item.length > HASHTAG_MAX_LENGTH) {
-      return failure('SCHEMA_FAILED', '话题标签格式不正确')
+      return failure(errorType, '话题标签格式不正确', field)
     }
     const tag = item.trim()
     // 契约要求：值不含前导 #（# 由程序渲染）
     if (tag.startsWith('#')) {
-      return failure('SCHEMA_FAILED', '话题标签不应包含 # 号')
+      return failure(errorType, '话题标签不应包含 # 号', field)
     }
     hashtags.push(tag)
   }
