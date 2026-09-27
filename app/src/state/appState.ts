@@ -63,6 +63,16 @@ export interface CardState {
    * 内容被重写后失效（REWRITE_SUCCESS 时清空）。
    */
   originalTitle: string | null
+  /**
+   * 分析抽屉是否展开（折叠/展开的**唯一**状态）。
+   *
+   * 默认折叠：卡片首屏只展示「标题 → 正文 → 话题标签」，
+   * 创作角度 / 封面建议 / 六维评分 / AI 味 / 发布检查 收进抽屉。
+   * 放在 CardState 而非组件内 useState，是为了沿用既有模式
+   * （view / draft / status 全部走 reducer）；GENERATE_SUCCESS 会重建所有卡片，
+   * 因此新一轮结果自动回到收起态。
+   */
+  analysisOpen: boolean
 }
 
 export function createCardState(): CardState {
@@ -78,6 +88,7 @@ export function createCardState(): CardState {
     complianceCheck: null,
     titleVariants: null,
     originalTitle: null,
+    analysisOpen: false,
   }
 }
 
@@ -234,6 +245,8 @@ export type AppAction =
   | { type: 'SET_FILTER_RISK'; risk: AppState['filterRisk'] }
   | { type: 'TOGGLE_SELECT'; localId: string }
   | { type: 'SET_SELECTION'; localIds: string[] }
+  // 卡片展示层级（本地 UI，不调 AI）
+  | { type: 'TOGGLE_ANALYSIS'; localId: string }
   // 就地编辑（本地，不调 AI）
   | { type: 'BEGIN_EDIT'; localId: string }
   | { type: 'UPDATE_DRAFT'; localId: string; patch: Partial<{ title: string; body: string }> }
@@ -428,6 +441,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, selected: toggleItem(state.selected, action.localId) }
     case 'SET_SELECTION':
       return { ...state, selected: action.localIds }
+
+    /* ---------- 卡片展示层级 ---------- */
+    case 'TOGGLE_ANALYSIS': {
+      const card = state.cards[action.localId]
+      if (card === undefined) {
+        return state
+      }
+      return patchCard(state, action.localId, { analysisOpen: !card.analysisOpen })
+    }
 
     /* ---------- 就地编辑（本地，不调 AI） ---------- */
     case 'BEGIN_EDIT': {

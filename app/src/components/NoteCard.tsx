@@ -1,31 +1,30 @@
 /**
- * 单篇笔记卡片（V2 核心组件）。
+ * 单篇笔记卡片（三级分层，V2 核心组件）。
  *
- * 信息层级：风格/方向/创作角度 → 标题 → 正文 → 话题标签 → 封面建议
- *          → 内容质量（六维）→ AI 味风险 → 合规状态 → 操作区
+ * 信息层级（这是本组件最重要的约定）：
+ *   L1 主层   风格标记 → 标题 → 正文 → 话题标签          永远可见
+ *   L2 摘要层 分数 + AI 味 + 合规 + 展开按钮             永远可见，低视觉权重
+ *   L3 分析层 创作角度 / 封面建议 / 六维评分 / AI 味 / 发布检查   默认折叠
+ *
+ * 分层的理由：正文是这张卡存在的意义，评分与检查是**围绕**它的分析。
+ * 此前两者平铺，导致 L3 的内容与正文争夺同样的视觉权重、卡片被撑得很高，
+ * 且多张卡之间因为区块完全相同而显得"五张卡长一个样"。
+ *
+ * ⚠️ 卡片之间的差异化只能来自**内容与排版**。PRD 4.1 把"五张结果卡五种配色"
+ *    列为视觉一票否决项，因此**不得**按风格给卡片上不同颜色。
  *
  * 三种形态：display / edit（就地编辑，不调 AI）/ rewrite（选目标风格，确认后才调 AI）。
  * 标题优化与发布前检查都是**用户主动触发**的一次 AI 调用。
  */
 
-import { SCORE_DIMENSION_MAX } from '../../shared/constants'
 import { STYLES } from '../../shared/enums'
 import type { Style } from '../../shared/enums'
+import { RISK_LABELS } from '../lib/riskLabels'
 import { variantSlotLabel } from '../lib/titleExperiment'
 import { useApp } from '../state/AppProvider'
 import { createCardState } from '../state/appState'
 import type { NoteWithId } from '../state/appState'
-
-const DIMENSION_LABELS: Record<keyof typeof SCORE_DIMENSION_MAX, string> = {
-  content_value: '内容价值',
-  specificity: '具体度',
-  native_feel: '原生感',
-  differentiation: '差异化',
-  structure: '结构完整',
-  authenticity: '真实性',
-}
-
-const RISK_LABELS: Record<string, string> = { low: '低', medium: '中', high: '高' }
+import { NoteAnalysis } from './NoteAnalysis'
 
 /** 当前生效的那一项高亮（标题可由用户在原稿与各变体之间切换） */
 function variantRowClass(active: boolean): string {
@@ -37,7 +36,6 @@ export function NoteCard({ note }: { note: NoteWithId }) {
     state,
     dispatch,
     submitRewrite,
-    submitScore,
     submitComplianceCheck,
     submitTitleVariants,
     saveNoteToAssets,
@@ -64,6 +62,9 @@ export function NoteCard({ note }: { note: NoteWithId }) {
   /** 当前内容是否已存入资产库（标题或正文变化后会重新变为未保存） */
   const saved = isNoteSaved(note.localId)
 
+  /** 用户主动复查过就用复查结果，否则用生成时的自检（摘要行与抽屉共用同一判定） */
+  const compliance = card.complianceCheck ?? note.compliance
+
   return (
     <article className="note-card">
       <header className="note-top">
@@ -74,20 +75,10 @@ export function NoteCard({ note }: { note: NoteWithId }) {
           checked={selected}
           onChange={() => dispatch({ type: 'TOGGLE_SELECT', localId: note.localId })}
         />
+        {/* 只保留一个风格标记：多风格批次下卡片之间需要可辨识，但不再堆叠 chip。
+            内容方向与创作角度移入 L3 抽屉，它们属于分析而非文案本体。 */}
         <span className="chip chip-style">{note.style}</span>
-        {note.content_directions.map((direction) => (
-          <span key={direction} className="chip chip-direction">
-            {direction}
-          </span>
-        ))}
-        {angle && (
-          <span className="chip chip-angle" title={angle.core_idea}>
-            创作角度 · {angle.type}
-          </span>
-        )}
       </header>
-
-      {angle && <p className="note-angle">本篇讲的是：{angle.core_idea}</p>}
 
       {isEditing ? (
         <div className="edit-area">
@@ -147,82 +138,42 @@ export function NoteCard({ note }: { note: NoteWithId }) {
             ))}
           </footer>
 
-          {/* 封面创意建议（只给创意，不生成图片） */}
-          <div className="cover">
-            <span className="cover-label">封面建议</span>
-            <div className="cover-body">
-              <p className="cover-headline">{note.cover_suggestion.headline}</p>
-              <p className="cover-meta">
-                画面主体：{note.cover_suggestion.visual_subject} · 构图：{note.cover_suggestion.composition}
-              </p>
-            </div>
-          </div>
-
-          {/* 内容质量（六维） */}
-          <div className="quality">
-            <div className="quality-head">
-              <span className="quality-label">内容质量</span>
-              <span className="quality-total">
-                {note.score.total}
-                <span className="quality-max">/100</span>
-              </span>
-              {card.scoreStale && <span className="score-stale">内容已修改，评分可能过时</span>}
-              <button
-                type="button"
-                className="card-button card-button-small"
-                disabled={busy}
-                onClick={() => void submitScore(note.localId)}
-              >
-                {card.status === 'scoring' ? '评分中…' : '重新评分'}
-              </button>
-            </div>
-            <div className="quality-dims">
-              {(Object.keys(SCORE_DIMENSION_MAX) as Array<keyof typeof SCORE_DIMENSION_MAX>).map((dimension) => (
-                <span key={dimension} className="dim">
-                  <span className="dim-label">{DIMENSION_LABELS[dimension]}</span>
-                  <span className="dim-value">
-                    {note.score[dimension]}
-                    <span className="dim-max">/{SCORE_DIMENSION_MAX[dimension]}</span>
-                  </span>
-                </span>
-              ))}
-            </div>
-            <p className="quality-note">
-              <span className="quality-note-key">优势</span>
-              {note.score.strength}
-            </p>
-            <p className="quality-note">
-              <span className="quality-note-key">建议</span>
-              {note.score.improvement}
-            </p>
-          </div>
-
-          {/* AI 味（独立风险） */}
-          <div className="check-row">
-            <span className="check-label">AI 味</span>
-            <span className={`risk risk-${note.ai_ness.risk_level}`}>
-              {RISK_LABELS[note.ai_ness.risk_level] ?? note.ai_ness.risk_level}
+          {/* L2 摘要层：收起时仍能看到分数与风险，避免折叠变成「盲选」 */}
+          <div className="note-summary">
+            <span className="summary-score">
+              {note.score.total}
+              <span className="summary-score-unit">/100</span>
             </span>
-            {note.ai_ness.issues.length > 0 && (
-              <span className="check-text">{note.ai_ness.issues.join('；')}</span>
-            )}
+            <span className="summary-item">
+              <span
+                className={`summary-mark summary-mark-${note.ai_ness.risk_level}`}
+                aria-hidden="true"
+              />
+              AI 味 {RISK_LABELS[note.ai_ness.risk_level]}
+            </span>
+            <span className="summary-item">
+              <span
+                className={`summary-mark summary-mark-${compliance.risk_level}`}
+                aria-hidden="true"
+              />
+              合规 {RISK_LABELS[compliance.risk_level]}
+            </span>
+            <button
+              type="button"
+              className="summary-toggle"
+              aria-expanded={card.analysisOpen}
+              aria-controls={`${note.localId}-analysis`}
+              onClick={() => dispatch({ type: 'TOGGLE_ANALYSIS', localId: note.localId })}
+            >
+              {card.analysisOpen ? '收起分析' : '展开分析'}
+              <span className="summary-caret" aria-hidden="true">
+                {card.analysisOpen ? '▴' : '▾'}
+              </span>
+            </button>
           </div>
 
-          {/* 合规（生成时的自检 + 用户主动复查） */}
-          <div className="check-row">
-            <span className="check-label">发布检查</span>
-            <span className={`risk risk-${(card.complianceCheck ?? note.compliance).risk_level}`}>
-              {RISK_LABELS[(card.complianceCheck ?? note.compliance).risk_level] ?? ''}
-            </span>
-            {(card.complianceCheck ?? note.compliance).issues.length > 0 ? (
-              <span className="check-text">
-                {(card.complianceCheck ?? note.compliance).issues.join('；')}
-              </span>
-            ) : (
-              <span className="check-text">未发现明显风险</span>
-            )}
-            <span className="check-note">AI 风险提示，不代表平台审核结果</span>
-          </div>
+          {/* L3 分析层（默认折叠）：角度 / 封面 / 六维 / AI 味 / 发布检查 */}
+          {card.analysisOpen && <NoteAnalysis note={note} angle={angle} />}
 
           <div className="note-actions">
             <button type="button" className="action-button" onClick={() => void copyNote(note.localId)}>

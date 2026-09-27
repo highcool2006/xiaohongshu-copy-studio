@@ -11,11 +11,11 @@
 
 import { useState } from 'react'
 
+import { RISK_LABELS } from '../lib/riskLabels'
 import { variantSlotLabel } from '../lib/titleExperiment'
 import type { SavedAsset } from '../lib/assetsStorage'
 import { useApp } from '../state/AppProvider'
 
-const RISK_LABELS: Record<string, string> = { low: '低', medium: '中', high: '高' }
 
 /** 把 ISO 时间格式化为本地可读文本；非法时间不抛错 */
 function formatTime(iso: string): string {

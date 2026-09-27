@@ -14,9 +14,9 @@ import { useMemo } from 'react'
 
 import { RECENT_DAYS, aggregate, isAnalyticsEmpty, sumRecent } from '../lib/analyticsStorage'
 import type { CountedItem, DailyCounter } from '../lib/analyticsStorage'
+import { RISK_LABELS } from '../lib/riskLabels'
 import { useApp } from '../state/AppProvider'
 
-const RISK_LABELS: Record<string, string> = { low: '低', medium: '中', high: '高' }
 
 /** 最近 N 天趋势里展示的 4 条曲线 */
 const TREND_FIELDS: Array<{ field: keyof Omit<DailyCounter, 'date'>; label: string }> = [

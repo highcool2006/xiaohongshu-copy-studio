@@ -6,8 +6,8 @@
  */
 
 import type { ContentStrategy } from '../../shared/types'
+import { RISK_LABELS } from '../lib/riskLabels'
 
-const RISK_LABEL: Record<string, string> = { low: '低', medium: '中', high: '高' }
 
 export function StrategyPanel({ strategy }: { strategy: ContentStrategy }) {
   const report = strategy.diversity_report
@@ -19,7 +19,7 @@ export function StrategyPanel({ strategy }: { strategy: ContentStrategy }) {
         <div className="diversity">
           <span className="diversity-label">多样性</span>
           <span className={`diversity-risk diversity-${report.duplicate_risk}`}>
-            重复风险 {RISK_LABEL[report.duplicate_risk] ?? report.duplicate_risk}
+            重复风险 {RISK_LABELS[report.duplicate_risk]}
           </span>
           <span className="diversity-detail">
             角度 {report.angle_types} · 开头 {report.opening_types} · 结构 {report.structure_types} · 结尾{' '}

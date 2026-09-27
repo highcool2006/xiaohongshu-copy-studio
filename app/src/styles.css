@@ -1616,30 +1616,135 @@ body {
   color: var(--brand);
 }
 
-/* ---------- 封面创意建议（只给创意，不生成图片） ---------- */
+/* ---------- L2 摘要层（收起态仍可比较分数与风险） ---------- */
 
-.cover {
+.note-summary {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--gap-3);
   margin-top: var(--gap-3);
-  padding: 11px 14px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border-hairline);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* 分数：摘要层唯一的强调元素，但字号明显低于标题 */
+.summary-score {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-score-unit {
+  margin-left: 1px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 风险点：6px 圆点 + 文字。只做颜色提示，不做徽章 —— 避免又回到 chip 堆叠 */
+.summary-mark {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.summary-mark-low { background: var(--success); }
+.summary-mark-medium { background: var(--hint-text); }
+.summary-mark-high { background: var(--danger); }
+
+.summary-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto; /* 推到最右，与分数/风险拉开距离 */
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.summary-toggle:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.summary-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.summary-caret {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+/* ---------- L3 分析层（默认折叠） ---------- */
+
+.analysis {
+  margin-top: var(--gap-3);
+  padding: 4px 14px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
 }
 
-.cover-label {
-  flex: none;
-  padding-top: 1px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
+/* 小节之间用细线分隔，而不是各自再加一层盒子 —— 避免「盒中盒」 */
+.analysis-section {
+  padding: 12px 0;
+  border-top: 1px solid var(--border-hairline);
 }
 
-.cover-body {
-  min-width: 0;
+.analysis-section:first-child {
+  border-top: none;
 }
+
+.analysis-heading {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+/* 抽屉里的小节自带标题，点题句不再需要上边距 */
+.analysis .note-angle {
+  margin-top: 0;
+}
+
+.analysis-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.analysis-meta {
+  margin: 9px 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-faint);
+}
+
+/* ---------- 封面创意建议（只给创意，不生成图片） ----------
+   注：原先的 .cover / .cover-label / .cover-body 盒式外壳已随卡片三级分层移除 ——
+   封面建议现在住在 L3 抽屉的 .analysis-section 里，由该小节统一提供外壳。 */
 
 .cover-headline {
   margin: 0;
@@ -1655,15 +1760,9 @@ body {
   color: var(--text-muted);
 }
 
-/* ---------- 内容质量（六维评分） ---------- */
-
-.quality {
-  margin-top: var(--gap-3);
-  padding: 13px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-}
+/* ---------- 内容质量（六维评分） ----------
+   注：原先的 .quality 盒式外壳已随卡片三级分层移除 —— 六维评分现在住在
+   L3 抽屉的 .analysis-section 里，由该小节统一提供外壳。 */
 
 .quality-head {
   display: flex;
