@@ -206,7 +206,8 @@ export function SetupPanel() {
           rows={5}
           value={profile.personalMaterial}
           placeholder={
-            '例如：\n上周三下午在工位犯困，从抽屉里翻出这根抹茶巧克力棒。\n第一口比想象中苦，抹茶味压过了甜，我愣了一下才反应过来。\n后来配美式吃，反而觉得刚好。'
+            // 每行控制在 16 字内：左栏宽度下中文约 19 字/行，超出会换行并被框体裁掉
+            '例如：\n周三下午在工位犯困，翻出这根。\n第一口比想象中苦，我愣了一下。\n后来配美式吃，反而刚好。'
           }
           onChange={(event) => dispatch({ type: 'SET_PERSONAL_MATERIAL', value: event.target.value })}
         />

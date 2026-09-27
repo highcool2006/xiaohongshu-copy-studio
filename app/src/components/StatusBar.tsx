@@ -15,7 +15,6 @@ export function StatusBar() {
         AI 状态：{mock ? 'Mock 模式（不消耗额度）' : '真实 AI（DeepSeek）'}
       </span>
       <span className="statusbar-item">数据来源：仅本地操作记录 · 未连接小红书平台数据</span>
-      <span className="statusbar-item statusbar-version">V2</span>
     </footer>
   )
 }

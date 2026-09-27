@@ -13,6 +13,9 @@
  *   - 所有结构标注为 **共享类型**（GenerateResponse / Note / ContentAngle…），契约一变就编译失败
  *   - 篇数严格等于 count；风格严格取自选中的 styles；分配复用 shared 的 allocateStyles
  *   - 文案只引用本次输入的 product / selling_points / target_users / scenarios / goal，不编造产品事实
+ *   - **不含任何第一人称使用经历**（使用行为与用量、时间地点事件、感官观察、第三方经历、亲测功效）：
+ *     Mock 数据本来就会进入截图与演示，必须与 prompts/shared.ts 的「分享口吻 vs 虚构经历」界线一致，
+ *     否则演示时会直接展示规则明令禁止的内容。态度、偏好、情绪、口语节奏不受此限。
  *   - diversity_report 由 shared 的 computeDiversityReport 计算（与真实链路同一套逻辑）
  *
  * 已知限制：单一风格且篇数 > 3 时模板会循环复用，出现重复卡片。
@@ -57,8 +60,8 @@ const CLEAN: ComplianceResult = { risk_level: 'low', issues: [], suggestions: []
 const TEMPLATES: MockTemplate[] = [
   {
     style: '亲切分享',
-    title: '{product}留在我抽屉里的理由，其实就一条',
-    body: '抽屉不大，能长期占位置的东西得有点道理。\n\n{product}留下的原因很直接：{points}。\n\n它不需要我记住什么复杂步骤，也不用提前准备，想起来就能用上。\n\n抽屉里的位置是有成本的。能把位置让给它，主要就是这一条：我会主动想起它，而不是因为它在那儿才顺手用一次。\n\n你挑常备东西的时候，也可以按这个标准过一遍。',
+    title: '{product}值得占一个位置，理由其实就一条',
+    body: '抽屉不大，能长期占位置的东西得有点道理。\n\n{product}被留下的理由很直接：{points}。\n\n它不需要记什么复杂步骤，也不用提前准备，想起来就能用上。\n\n抽屉里的位置是有成本的。能把位置让给它，主要就是这一条：它会让人主动想起来，而不是因为在那儿才顺手用一次。\n\n你挑常备东西的时候，也可以按这个标准过一遍。',
     hashtags: ['{product}', '常备好物', '抽屉收纳', '办公室日常', '生活小习惯'],
     content_directions: ['用户痛点'],
     angle: { type: '人群', core_idea: '用「抽屉位置成本」这个标准筛选常备品', hook_type: '场景切入', structure_type: '单一标准', ending_type: '轻邀请' },
@@ -69,8 +72,8 @@ const TEMPLATES: MockTemplate[] = [
   },
   {
     style: '亲切分享',
-    title: '说真的，{product}我用得最顺手的是这种时候',
-    body: '有段时间我一直在找一个「不用特意安排」的东西。\n\n不是那种要提前准备、用完还要收拾的，而是想起来就能接上的那种。{product}对我来说就落在这个位置上。\n\n它被明确写出来的好处是 {points}。我挑它看的就是这一条。\n\n我一般不会一次囤太多。留一点在顺手的位置，需要的时候刚好有，就够了。\n\n如果你也有那种「临时想找点什么」的时刻，可以按这个思路想想自己缺的是什么。',
+    title: '说真的，「不用特意安排」的东西，{product}算一个',
+    body: '要找的其实不是「好用」，是「不用特意安排」。\n\n不是那种要提前准备、用完还要收拾的，而是想起来就能接上的那种。{product}就落在这个位置上。\n\n它被明确写出来的好处是 {points}。挑它，看的就是这一条。\n\n这种随手就能用的东西，量不必多。留一点在顺手的位置，需要的时候刚好有，就够了。\n\n如果你也有那种「临时想找点什么」的时刻，可以按这个思路想想自己缺的是什么。',
     hashtags: ['{product}', '生活方式', '随手可用', '懒人好物', '日常记录'],
     content_directions: ['使用场景'],
     angle: { type: '场景', core_idea: '「不用特意安排」的使用时机', hook_type: '需求切入', structure_type: '叙事线', ending_type: '反问' },
@@ -81,8 +84,8 @@ const TEMPLATES: MockTemplate[] = [
   },
   {
     style: '亲切分享',
-    title: '挑来挑去，最后让我停下的是这一点',
-    body: '买之前我通常会比很久，比到最后反而更乱。\n\n后来我换了个方式：不看谁说得更热闹，只看它明确写了什么。{product}写出来的是 {points}，就这一条，很干净。\n\n信息少有一个好处：你能验证的部分少，要猜的部分也少。剩下的就交给我自己的判断。\n\n说不上多惊艳，但它没有让我产生「是不是被说动了」的感觉，这一点我还挺在意。\n\n你买东西的时候，会更信任写得多的，还是写得少的？',
+    title: '挑来挑去，最后起决定作用的往往是这一点',
+    body: '买之前会比很久，比到最后反而更乱。\n\n换个方式：不看谁说得更热闹，只看它明确写了什么。{product}写出来的是 {points}，就这一条，很干净。\n\n信息少有一个好处：你能验证的部分少，要猜的部分也少。剩下的交给自己的判断。\n\n说不上多惊艳，但它没让人产生「是不是被说动了」的感觉，这一点我还挺在意。\n\n你买东西的时候，会更信任写得多的，还是写得少的？',
     hashtags: ['{product}', '挑选心得', '消费心理', '买东西的纠结', '少即是多'],
     content_directions: ['情绪共鸣'],
     angle: { type: '情绪', core_idea: '信息少反而更好判断的购物心理', hook_type: '自我剖白', structure_type: '心理对照', ending_type: '提问' },
@@ -117,7 +120,7 @@ const TEMPLATES: MockTemplate[] = [
   },
   {
     style: '专业测评',
-    title: '同类里选{product}，我只看这两个维度',
+    title: '同类里选{product}，只看这两个维度',
     body: '同类产品放在一起比，比「哪个更好」意义不大，答案因人而异。\n\n换个比法，按两个维度看。\n\n维度一：它主打的点对你是否成立。{product}主打的是 {points}。如果你正好在意这一点，它就在你的选项里；不在意，它就不在。\n\n维度二：你是否需要一个这样的形态。同一类产品在形态上的差别，往往比参数更影响实际使用频率。\n\n两个维度都对上再考虑；只对上一条，可以再等等。',
     hashtags: ['{product}', '对比分析', '同类对比', '选购参考', '不踩坑'],
     content_directions: ['对比分析'],
@@ -145,27 +148,27 @@ const TEMPLATES: MockTemplate[] = [
   },
   {
     style: '搞笑段子',
-    title: '包装只写了两个字的东西，我居然纠结了十分钟',
-    body: '我站在货架前。\n\n旁边那盒，正反面印得满满当当。\n\n我手里这个，{product}。\n\n卖点：{points}。\n\n就这。\n\n我愣了三秒。\n\n兄弟，你至少给我点台词啊。\n\n……行吧。\n\n至少它没骗我。它说了什么，我就只需要回答一个问题：我在不在意这一条。\n\n这个问题，我会。\n\n于是我把纠结的十分钟，花在了回家路上。',
-    hashtags: ['{product}', '选择困难', '货架前', '日常吐槽', '买东西的纠结'],
+    title: '卖点只写了一行的时候，人反而会卡住',
+    body: '卖点只写了一行，反而不好办。\n\n不是因为它不好判断。\n\n是因为它把问题原样退回来了。\n\n{product}就是这样。\n\n卖点：{points}。\n\n就这。\n\n没有别的可看，也没有别的可挑。\n\n兄弟，你至少给点台词啊。\n\n……行吧。\n\n至少它没骗人。它说了什么，就只需要回答一个问题：在不在意这一条。\n\n这个问题，包装上不写。\n\n得自己答。',
+    hashtags: ['{product}', '选择困难', '只有一行卖点', '日常吐槽', '买东西的纠结'],
     content_directions: ['用户痛点'],
     angle: { type: '情绪', core_idea: '信息少反而不会选的纠结', hook_type: '场景切入', structure_type: '极短句段', ending_type: '冷收' },
-    score: { total: 75, content_value: 19, specificity: 15, native_feel: 15, differentiation: 11, structure: 7, authenticity: 8, strength: '极短句与留白构成了段落节奏，把「信息少反而不会选」做成了笑点。', improvement: '结尾「花在了回家路上」略平，可换成更干脆的一句。' },
+    score: { total: 75, content_value: 19, specificity: 15, native_feel: 15, differentiation: 11, structure: 7, authenticity: 8, strength: '极短句与留白构成了段落节奏，把「信息少反而不会选」做成了笑点。', improvement: '中段可以再砍一句，让转折更干脆。' },
     ai_ness: LOW_RISK,
     compliance: CLEAN,
-    cover_headline: '两个字的选择困难',
+    cover_headline: '一行卖点的选择困难',
   },
   {
     style: '搞笑段子',
-    title: '被 {points} 这几个字打动的我，最后还是犹豫了',
-    body: '有些卖点，看一眼就让人心动。\n\n{product}打动我的地方写得很简单：{points}。\n\n简单到我不知道该不该信。\n\n你说它少吧，也确实少；你说它实在吧，也就这一句。\n\n我盯着这几个字看了很久，最后发现一个问题——\n\n我不是在判断它，我是在判断我自己到底想不想要。\n\n这个问题，包装上不写。\n\n它不写，我也得自己答。',
+    title: '{points} 这几个字，为什么反而让人犹豫',
+    body: '有些卖点，看一眼就让人心动。\n\n{product}打动人的地方写得很简单：{points}。\n\n简单到不知道该不该信。\n\n说它少吧，也确实少；说它实在吧，也就这一句。\n\n看久了会发现一个问题——\n\n这不是在判断它，是在判断自己到底想不想要。\n\n这个问题，包装上不写。\n\n它不写，也得自己答。',
     hashtags: ['{product}', '内心戏', '买东西的纠结', '纠结日常', '与自己和解'],
     content_directions: ['情绪共鸣'],
     angle: { type: '情绪', core_idea: '纠结的其实是自己', hook_type: '情绪切入', structure_type: '内心独白', ending_type: '自然停顿' },
     score: { total: 77, content_value: 19, specificity: 14, native_feel: 17, differentiation: 12, structure: 7, authenticity: 8, strength: '把「纠结的其实是自己」这层意思点出来，节奏短促且没有编造体验。', improvement: '倒数两句可以合并，让冷收更干脆。' },
     ai_ness: LOW_RISK,
     compliance: CLEAN,
-    cover_headline: '我在判断我自己',
+    cover_headline: '判断的其实是自己',
   },
   {
     style: '干货攻略',

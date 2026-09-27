@@ -172,7 +172,7 @@ export function ResultPanel() {
 
         {!hasNotes && !isLoading && batch.status !== 'error' && (
           <div className="empty">
-            <p className="empty-eyebrow">V2 内容工作台</p>
+            <p className="empty-eyebrow">内容工作台</p>
             <p className="empty-title">开始创作你的第一批小红书文案</p>
             <p className="empty-lede">
               AI 会先规划本轮的内容策略与创作角度，再按你选择的风格生成互不重复的文案。

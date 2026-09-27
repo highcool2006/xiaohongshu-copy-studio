@@ -322,14 +322,8 @@ body {
   text-overflow: ellipsis;
 }
 
-.statusbar-version {
-  margin-left: auto;
-  padding: 1px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
-}
+/* 注：原 .statusbar-version（右下角 V2 徽标）已移除 ——
+   版本号属于实现细节，不应出现在用户界面上（PRD 4.2 文案禁忌）。 */
 
 /* ============================================================
    3. 左栏：创作设置（稳定的配置栏）
@@ -2890,10 +2884,6 @@ body {
     height: auto;
     padding: 8px var(--gap-4);
     gap: var(--gap-2) var(--gap-4);
-  }
-
-  .statusbar-version {
-    margin-left: 0;
   }
 
   .data-table th {
