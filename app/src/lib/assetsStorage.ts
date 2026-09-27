@@ -11,7 +11,7 @@
  */
 
 import type { ContentDirection, ContentGoal, RiskLevel, Style } from '../../shared/enums'
-import type { TitleVariant } from '../../shared/types'
+import type { CoverSuggestion, TitleVariant } from '../../shared/types'
 
 /** 存储键（带产品前缀，避免与同域其它应用冲突） */
 export const ASSETS_STORAGE_KEY = 'xhs-copy-studio/assets'
@@ -50,6 +50,13 @@ export interface SavedAsset {
     original_title: string | null
     variants: TitleVariant[]
   }
+  /**
+   * 封面创意建议（2026-09-27 新增，可选）。
+   *
+   * ⚠️ 可选是刻意的：**此前收藏的资产没有这个字段**，读取时缺失即视为「未记录」，
+   *    资产卡片的封面模板区显示占位文案而不是报错。写入永远带上它。
+   */
+  cover_suggestion?: CoverSuggestion
 }
 
 /** 落盘结构 */
@@ -138,6 +145,23 @@ export function parseAsset(value: unknown): SavedAsset | null {
     }
   }
 
+  // 封面建议：三个字段齐全才算有效，否则视为「未记录」（旧资产走这条分支）
+  const rawCover = value['cover_suggestion']
+  let cover: CoverSuggestion | undefined
+  if (isRecord(rawCover)) {
+    const headline = rawCover['headline']
+    const visualSubject = rawCover['visual_subject']
+    const composition = rawCover['composition']
+    if (
+      typeof headline === 'string' &&
+      headline.length > 0 &&
+      typeof visualSubject === 'string' &&
+      typeof composition === 'string'
+    ) {
+      cover = { headline, visual_subject: visualSubject, composition }
+    }
+  }
+
   return {
     id,
     savedAt: typeof savedAt === 'string' && savedAt.length > 0 ? savedAt : new Date().toISOString(),
@@ -160,6 +184,8 @@ export function parseAsset(value: unknown): SavedAsset | null {
       ai_ness_risk: isRiskLevel(ai_ness_risk) ? ai_ness_risk : 'low',
     },
     title_experiment: { original_title: originalTitle, variants },
+    // 旧资产没有这一项 → 保持 undefined（界面据此显示「收藏时未记录」）
+    ...(cover === undefined ? {} : { cover_suggestion: cover }),
   }
 }
 

@@ -69,7 +69,7 @@ export function ResultPanel() {
     <section className="workspace" aria-label="文案工作区">
       <header className="workspace-head">
         <div className="workspace-heading">
-          <h2 className="workspace-title">生成结果</h2>
+          <h2 className="workspace-title">爆款方案</h2>
           {hasNotes ? (
             <p className="workspace-summary">
               {notes.length} 篇 · {usedStyles.length} 种风格{durationText ? ` · 用时 ${durationText}` : ''}
@@ -172,18 +172,25 @@ export function ResultPanel() {
 
         {!hasNotes && !isLoading && batch.status !== 'error' && (
           <div className="empty">
-            <p className="empty-eyebrow">内容工作台</p>
-            <p className="empty-title">开始创作你的第一批小红书文案</p>
-            <p className="empty-lede">
-              AI 会先规划本轮的内容策略与创作角度，再按你选择的风格生成互不重复的文案。
+            <p className="empty-eyebrow">种草实验室</p>
+            <p className="empty-title">
+              你好，抹茶巧克力棒
+              <span className="empty-wave" aria-hidden="true">
+                👋
+              </span>
+            </p>
+            <p className="empty-lede empty-lede-strong">今天想创造什么爆款？</p>
+            <p className="empty-sub">
+              把生活里的一点灵感，变成值得分享的故事。
+              左边填好产品与卖点，我来把它写成能直接发出去的样子。
             </p>
             <ol className="empty-steps">
-              <li>在左侧填写产品名称与卖点（至少各一项）</li>
-              <li>选择目标用户、内容目标与文案风格</li>
-              <li>生成后可逐篇重写、重新评分、做发布前检查</li>
+              <li>填写产品名称与卖点（至少各一项）</li>
+              <li>选目标用户、文案类型与文案风格</li>
+              <li>生成后逐篇重写、评分、做发布前检查</li>
             </ol>
             <button type="button" className="empty-cta" onClick={() => void submitGenerate()}>
-              生成文案
+              生成爆款方案
             </button>
           </div>
         )}
@@ -213,8 +220,9 @@ export function ResultPanel() {
             </div>
 
             <div className="note-list">
-              {visibleNotes.map((note: NoteWithId) => (
-                <NoteCard key={note.localId} note={note} />
+              {visibleNotes.map((note: NoteWithId, index: number) => (
+                /* 序号按**当前可见顺序**给（受排序与筛选影响），与卡片上的「方案 01」一致 */
+                <NoteCard key={note.localId} note={note} index={index + 1} />
               ))}
             </div>
 

@@ -18,7 +18,7 @@ import {
   SCORE_DIMENSION_MAX,
   SCORE_TOTAL_MAX,
 } from '../shared/constants.js'
-import { CONTENT_DIRECTIONS, COPY_TYPES, STYLES } from '../shared/enums.js'
+import { ANGLE_TYPES, CONTENT_DIRECTIONS, COPY_TYPES, STYLES } from '../shared/enums.js'
 import type { ContentDirection, CopyType, Style } from '../shared/enums.js'
 
 /** Prompt 消息结构：与具体 SDK 无关（system + user 两条） */
@@ -67,6 +67,18 @@ export const ALLOWED_STYLES_TEXT = STYLES.map((style) => `"${style}"`).join(' / 
 
 /** 允许的内容方向（由 CONTENT_DIRECTIONS 生成） */
 export const ALLOWED_DIRECTIONS_TEXT = CONTENT_DIRECTIONS.map((item) => `"${item}"`).join(' / ')
+
+/**
+ * 允许的创作角度类型（由 ANGLE_TYPES 生成）。
+ *
+ * ⚠️ 每个值**单独加引号**、用顿号分隔 —— 不用斜杠。
+ * 原因：斜杠串（`场景 / 人群 / …`）写在引号里时，模型容易把整串当成一个合法值照抄，
+ * 或误以为可以组合；逐个引号包裹后，它读起来就是「若干个互斥的取值」，而不是一个字符串。
+ */
+export const ALLOWED_ANGLE_TYPES_TEXT = ANGLE_TYPES.map((type) => `"${type}"`).join('、')
+
+/** 创作角度类型的 JSON 取值写法：`"场景" | "人群" | …`（要么/要么，不是字面量） */
+export const ANGLE_TYPE_JSON_UNION = ANGLE_TYPES.map((type) => `"${type}"`).join(' | ')
 
 /**
  * hashtags 规则（数量由 shared 常量生成）。
@@ -162,7 +174,7 @@ export const STRATEGY_JSON_SCHEMA_TEXT = `{
   "angles": [
     {
       "id": "角度 id（如 a1、a2…，各篇唯一）",
-      "type": "场景 / 人群 / 决策 / 产品 / 对比 / 情绪 / 清单",
+      "type": ${ANGLE_TYPE_JSON_UNION},
       "audience": "这一篇讲给谁看",
       "scenario": "这一篇落在什么场景",
       "core_idea": "这一篇要讲的那一件事（一句话）",
@@ -187,10 +199,22 @@ export const STRATEGY_RULES_TEXT = `【内容策略与创作角度 —— 这是
 3. "strategy.angles"：**每篇文案一个角度**，数量必须等于总篇数。
 4. **每个 angle 必须是一个不同的内容 IDEA，不是同一种说法的不同措辞。**
    - 反例（不合格）：7 篇都是"场景分享"，只是把时间从"下午三点"换成"晚上八点"。
-   - 正例（合格）：场景 / 人群 / 决策 / 产品 / 对比 / 情绪 / 清单 各切入一次。
+   - 正例（合格）：分别从场景、人群、决策、产品等**不同**角度切入，每篇讲的**那件事**都不一样。
+   - **注意：差异性看的是 core_idea（讲的是哪件事），不是 type。**
+     类型一共只有 7 种，而本轮篇数是 5～10 篇，因此：
+     - **不要求**把 7 种类型都用上；
+     - "type" **允许重复**（只要 core_idea 不同）；
+     - **绝对不要**为了"凑齐 7 种类型"而自创类型、拆分角度或改变 angles 的数量。
 5. 每个 angle 必须写清：讲给谁看（audience）、落在什么场景（scenario）、**这一篇要讲的那一件事**（core_idea，一句话）、开头类型（hook_type）、组织方式（structure_type）、结尾方式（ending_type）。
 6. 整批的 hook_type、structure_type、ending_type **必须有明显差异**；"结论前置"型开头最多 2 篇。
-7. "angle.type" 只能取：场景 / 人群 / 决策 / 产品 / 对比 / 情绪 / 清单。
+7. **"angle.type" 只能从下面 7 个值中选一个，且必须原样照抄**（一字不改）：
+   ${ALLOWED_ANGLE_TYPES_TEXT}
+   - **禁止自创类型。** 以下都是**不合格**的写法（本产品不承认这些值）：
+     使用场景、购买建议、痛点、用户痛点、产品亮点、性价比、口碑、颜值、干货、测评、经验、开箱、种草。
+   - 不得写成**组合**（如 "场景 / 人群"）或**多值**（如 "场景、情绪"）——
+     每个 angle 的 type 字段里**有且只有一个**值。
+   - 也不得照抄成 ${ANGLE_TYPE_JSON_UNION} 这一整行 ——
+     这是"七个可选值"的列举写法，**不是**一个可以填进字段的字符串。
 8. 信息不足时，角度可向**决策、场景、情绪、清单**倾斜，但**每个角度仍必须落到用户提供的卖点上**（说明"这个卖点在那个场景下对你意味着什么"）；**不得**规划出不依赖产品的通用内容。
 9. 每篇 note 的 "angle_id" 必须等于它对应的 angle 的 "id"。`
 

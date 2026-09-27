@@ -154,6 +154,13 @@ export interface AppState {
   referenceAnalysisError: string | null
   notes: NoteWithId[]
   cards: Record<string, CardState>
+  /**
+   * 当前聚焦的方案（右栏「小抹洞察」据此给出优势 / 建议 / 下一步）。
+   *
+   * 生成后默认聚焦第一篇；用户点任意方案卡片时切换。
+   * 纯前端展示状态，不进入任何 API 契约。
+   */
+  focusedLocalId: string | null
   /** 结果区排序与筛选（仅存用户选择；排序结果是派生值） */
   sort: 'quality' | 'newest'
   filterStyle: Style | 'all'
@@ -199,6 +206,7 @@ export const initialAppState: AppState = {
   referenceAnalysisError: null,
   notes: [],
   cards: {},
+  focusedLocalId: null,
   sort: 'newest',
   filterStyle: 'all',
   filterRisk: 'all',
@@ -247,6 +255,8 @@ export type AppAction =
   | { type: 'SET_SELECTION'; localIds: string[] }
   // 卡片展示层级（本地 UI，不调 AI）
   | { type: 'TOGGLE_ANALYSIS'; localId: string }
+  /** 切换右栏洞察聚焦的方案 */
+  | { type: 'SET_FOCUS'; localId: string }
   // 就地编辑（本地，不调 AI）
   | { type: 'BEGIN_EDIT'; localId: string }
   | { type: 'UPDATE_DRAFT'; localId: string; patch: Partial<{ title: string; body: string }> }
@@ -421,6 +431,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         notes: action.notes,
         // 新一轮结果是全新集合 → 重置所有卡片状态与选中项
         cards: Object.fromEntries(action.notes.map((note) => [note.localId, createCardState()])),
+        // 默认聚焦第一篇，右栏一生成就有内容，不出现空窗
+        focusedLocalId: action.notes[0]?.localId ?? null,
         selected: [],
         filterStyle: 'all',
         filterRisk: 'all',
@@ -443,6 +455,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, selected: action.localIds }
 
     /* ---------- 卡片展示层级 ---------- */
+    case 'SET_FOCUS': {
+      if (state.focusedLocalId === action.localId) {
+        return state
+      }
+      return { ...state, focusedLocalId: action.localId }
+    }
+
     case 'TOGGLE_ANALYSIS': {
       const card = state.cards[action.localId]
       if (card === undefined) {

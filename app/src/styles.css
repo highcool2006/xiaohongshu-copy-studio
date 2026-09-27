@@ -22,8 +22,8 @@
    ============================================================ */
 
 :root {
-  /* 底色与表面 */
-  --bg: #f6f3ee;
+  /* 底色与表面（奶油白纸感） */
+  --bg: #faf7f1;
   --surface: #fffefb;
   --surface-sunken: #faf8f4;
   --surface-hover: #f5f2ec;
@@ -47,6 +47,26 @@
   --brand-soft: #fdeeea;
   --brand-border: #f2c4bd;
   --brand-tint: #fffaf9;
+
+  /**
+   * 创作者品牌色（2026-09-27 加入）
+   *
+   * 「抹茶巧克力棒 · 种草实验室」的两支品牌色，与小红书红构成三层用色：
+   *   - 红（--brand）  ：强调与行动点，**仅此一处**语义，不可再分给别的用途
+   *   - 抹茶绿（--matcha）：创作者身份的辅助色 —— 品牌标识、AI 助手「小抹」、正向状态
+   *   - 巧克力棕（--choco）：细节与次级强调 —— 眉标、数据标签、分隔装饰
+   *
+   * ⚠️ 只作为**低饱和点缀**使用：不用于大面积铺底，不用于卡片配色区分。
+   *    任务书 4.1 把「多种高饱和渐变卡片撞色、五张结果卡五种配色」列为一票否决项，
+   *    因此卡片之间**不得**按风格或方案上不同颜色。
+   */
+  --matcha: #6f8f63;
+  --matcha-strong: #556f4b;
+  --matcha-soft: #eef3ea;
+  --matcha-border: #d2e0c8;
+  --choco: #6b5443;
+  --choco-soft: #f4ede6;
+  --choco-border: #e2d5c7;
 
   /* 语义状态色 */
   --danger: #b3372e;
@@ -94,6 +114,14 @@
      - 工作台以「占满桌面」为目标：外壳宽度只在上限处收口，避免在 1920 屏幕上
        形成中央小岛；左栏固定宽度，右栏吃掉全部剩余空间。 */
   --rail-width: 340px;
+  /**
+   * 右栏「小抹洞察」宽度。
+   *
+   * 三栏共存的代价是中间列变窄：1440px 视口下
+   *   1440 − 48（左右内边距）− 56（两条 gap）− 340 − 330 = 666px
+   * 因此中间方案区按**单列**排布（卡片网格的 minmax 下限设 340px，正好只容一列）。
+   */
+  --insight-width: 330px;
   --shell-max: 1800px;
   /* 三视图与工作台共用同一上限，避免切换视图时出现「中央小岛」 */
   --page-max: 1800px;
@@ -252,48 +280,66 @@ body {
 }
 
 /* 会话统计：弱化处理，只作为参考信息存在，不与会话导航抢注意力 */
+/* 会话统计：一行轻量文字，不做成指标卡组 */
 .topbar-stats {
   flex: none;
   display: flex;
   align-items: center;
-  gap: var(--gap-5);
-  padding-left: var(--gap-6);
+  gap: var(--gap-4);
+  margin: 0;
+  padding-left: var(--gap-5);
   border-left: 1px solid var(--border-hairline);
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .topbar-stat {
-  display: flex;
+  display: inline-flex;
   align-items: baseline;
-  gap: 5px;
+  gap: 4px;
 }
 
 .topbar-stat-value {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 650;
+  color: var(--choco);
   font-variant-numeric: tabular-nums;
 }
 
-.topbar-stat-label {
-  font-size: 10.5px;
+/* 工程向的一项（用时）退到最后，不与「生成了几篇」争注意力 */
+.topbar-stat-quiet {
   color: var(--text-faint);
-  white-space: nowrap;
+  font-size: 11px;
 }
+
+/* 注：原 .topbar-stat-label 已随会话统计合并为一行文字而移除。 */
 
 /* ---------- 主体 ---------- */
 
+/**
+ * 工作台三栏：创作输入 | 爆款方案（核心）| 小抹洞察
+ *
+ * 左右两栏固定像素宽，中间吃掉全部剩余空间（minmax(0,…) 保证内部内容撑不破列）。
+ * 不用后台管理系统的「左侧导航 + 顶栏 + 内容区」范式 —— 三栏都是**内容**，
+ * 没有一层是导航。
+ */
 .app-main {
   flex: 1;
   display: grid;
-  /* 左栏固定像素宽，右栏吃掉全部剩余空间（minmax(0,…) 保证内部内容撑不破列） */
-  grid-template-columns: var(--rail-width) minmax(0, 1fr);
-  gap: 28px;
+  grid-template-columns: var(--rail-width) minmax(0, 1fr) var(--insight-width);
+  gap: 24px;
   align-items: stretch;
   width: 100%;
   max-width: var(--shell-max);
   min-height: 0;
   margin: 0 auto;
   padding: var(--gap-5) var(--gap-6);
+}
+
+/* 单栏视图（风格库 / 数据看板 / 资产库）：不套三栏骨架 */
+.app-main-single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* 单栏视图（风格库 / 数据看板 / 资产库） */
@@ -1518,18 +1564,217 @@ body {
   align-items: start;
 }
 
-.note-card {
+/* ---------- 爆款方案卡片 ---------- */
+
+.plan-card {
   padding: 18px 20px var(--gap-4);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
-.note-card:hover {
+.plan-card:hover {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-float);
+  transform: translateY(-1px);
+}
+
+/* 当前聚焦的方案：右栏「小抹洞察」正在讲的就是它，用品牌色描边标出 */
+.plan-card-focused {
+  border-color: var(--brand-border);
+  box-shadow: var(--shadow-float);
+}
+
+/* ---------- 卡片头部：方案序号 · 风格 · 爆款指数 ---------- */
+
+.plan-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-2);
+}
+
+.plan-index {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--choco);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 爆款指数：卡片上最醒目的数字，靠 margin-left:auto 推到右侧 */
+.plan-score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.plan-score-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.plan-score-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-score-unit {
+  margin-left: 1px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+/* 进度条：纯展示 note.score.total，不是流量预测 */
+.plan-meter {
+  height: 4px;
+  margin-top: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  overflow: hidden;
+}
+
+.plan-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- 推荐标题与结构化元信息 ---------- */
+
+.plan-label {
+  margin: 16px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.plan-title {
+  margin: 6px 0 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.plan-meta {
+  margin: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap-3);
+}
+
+.plan-meta-key {
+  flex: none;
+  width: 62px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.plan-meta-val {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.plan-meta-angle {
+  line-height: 1.65;
+}
+
+/* 风险标记：与摘要层同款圆点，低视觉权重 */
+.plan-risks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-4);
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ---------- 卡片操作区 ---------- */
+
+.plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-2);
+  margin-top: 14px;
+}
+
+/* 次级操作行：不与主操作抢注意力 */
+.plan-actions-quiet {
+  margin-top: 8px;
+}
+
+.plan-quiet-button {
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.plan-quiet-button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.plan-quiet-button:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+/* ---------- 详情层（查看完整笔记） ---------- */
+
+.plan-detail {
+  margin-top: var(--gap-4);
+  padding-top: var(--gap-4);
+  border-top: 1px solid var(--border-hairline);
+  animation: reveal 0.22s ease-out;
+}
+
+.plan-detail-label {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+/* 展开动画：轻微上浮 + 淡入，不做位移过大的花哨效果 */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .note-top {
@@ -1572,15 +1817,7 @@ body {
   color: var(--hint-text);
 }
 
-/* 标题是卡片内最大的元素：字号与字重都高于正文、质量分与所有元信息 */
-.note-title {
-  margin: 12px 0 9px;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.45;
-  letter-spacing: -0.01em;
-  color: var(--text);
-}
+/* 注：原 .note-title 已由 .plan-title 取代（卡片改版为「推荐标题 + 爆款指数」结构）。 */
 
 .note-body {
   margin: 0;
@@ -1610,34 +1847,7 @@ body {
   color: var(--brand);
 }
 
-/* ---------- L2 摘要层（收起态仍可比较分数与风险） ---------- */
-
-.note-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--gap-3);
-  margin-top: var(--gap-3);
-  padding-top: 11px;
-  border-top: 1px solid var(--border-hairline);
-  font-size: 12.5px;
-  color: var(--text-muted);
-}
-
-/* 分数：摘要层唯一的强调元素，但字号明显低于标题 */
-.summary-score {
-  font-size: 15px;
-  font-weight: 650;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-.summary-score-unit {
-  margin-left: 1px;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--text-faint);
-}
+/* ---------- 风险圆点（方案卡片与右栏洞察共用） ---------- */
 
 .summary-item {
   display: inline-flex;
@@ -1657,39 +1867,14 @@ body {
 .summary-mark-medium { background: var(--hint-text); }
 .summary-mark-high { background: var(--danger); }
 
-.summary-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: auto; /* 推到最右，与分数/风险拉开距离 */
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
-}
-
-.summary-toggle:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-hover);
-  color: var(--text);
-}
-
-.summary-toggle:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
-}
-
+/* 展开指示器：跟在「查看完整笔记」按钮文字后面 */
 .summary-caret {
   font-size: 10px;
-  color: var(--text-faint);
+  color: currentColor;
+  opacity: 0.7;
 }
 
-/* ---------- L3 分析层（默认折叠） ---------- */
+/* ---------- 详情层的分析区（默认折叠） ---------- */
 
 .analysis {
   margin-top: var(--gap-3);
@@ -2374,33 +2559,7 @@ body {
 /* ---------- 数据看板 / 内容复盘 ---------- */
 
 /* 第一层：核心指标卡 */
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: var(--gap-2);
-}
-
-.metric-card {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--gap-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-}
-
-.metric-value {
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-}
-
-.metric-label {
-  font-size: 11.5px;
-  color: var(--text-muted);
-}
+/* 注：原 .metric-grid / .metric-card 十卡指标墙已由 .hero-metrics + .footprint-line 取代。 */
 
 /* 第二、三层：内容块 */
 .review-block {
@@ -2408,13 +2567,6 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
-}
-
-.review-block-title {
-  margin: 0 0 10px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text-muted);
 }
 
 .review-muted {
@@ -2428,158 +2580,12 @@ body {
   margin-top: 0;
 }
 
-.review-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--gap-3);
-}
-
-.review-score {
-  margin: 0;
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-
-.review-score-max {
-  margin-left: 2px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-faint);
-}
-
-/* 趋势合计 */
-.trend-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gap-2) var(--gap-5);
-  margin-bottom: var(--gap-3);
-}
-
-.trend-legend-item {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.trend-legend-key {
-  font-size: 11.5px;
-  color: var(--text-muted);
-}
-
-.trend-legend-value {
-  font-size: 14px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-
-.trend-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-  /* 固定布局：日期列定宽，其余各列等分（否则表头文字长短会把列宽拉歪） */
-  table-layout: fixed;
-}
-
-.trend-table th:first-child,
-.trend-table td:first-child {
-  width: 88px;
-}
-
-.trend-table th,
-.trend-table td {
-  padding: 7px 0;
-  text-align: left;
-  font-variant-numeric: tabular-nums;
-}
-
-.trend-table thead th {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.trend-table tbody tr + tr th,
-.trend-table tbody tr + tr td {
-  border-top: 1px solid var(--border-hairline);
-}
-
-.trend-table tbody th {
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-/* 当天真有操作时加深，便于一眼看出活跃日 */
-.trend-cell-active {
-  font-weight: 650;
-  color: var(--text);
-}
-
-/* 分布条（纯 CSS，不引入图表库） */
-.dist-list {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dist-item {
-  display: grid;
-  grid-template-columns: minmax(64px, auto) 1fr auto;
-  align-items: center;
-  gap: var(--gap-2);
-  font-size: 12.5px;
-}
-
-.dist-key {
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.dist-bar {
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-  overflow: hidden;
-}
-
-.dist-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--brand);
-}
-
-.dist-value {
-  min-width: 24px;
-  text-align: right;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-
-.risk-list {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.risk-item {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-2);
-  font-size: 12.5px;
-}
-
-.risk-count {
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
+/* 注：以下模块随成长记录改为「旅程 + 习惯」而移除，信息未减少，只是不再用图形表达 —
+   .review-grid / .review-score（大数字块）→ .hero-metric
+   .dist-*（分布条）                    → .habit-row 文字陈述
+   .risk-list / .risk-item / .risk-count → .habit-row 一行风险计数
+   .trend-*（7 天表格）                 → .journey 时间线
+   .review-block-title                 → 各区块改用 .page-section */
 
 /* ---------- 资产库 ---------- */
 
@@ -2667,16 +2673,7 @@ body {
   gap: 6px;
 }
 
-.asset-stat-key {
-  font-size: 11.5px;
-  color: var(--text-muted);
-}
-
-.asset-stat-value {
-  font-size: 14px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
+/* 注：原 .asset-stat-key / .asset-stat-value 已由 .asset-score + 风险圆点取代。 */
 
 .asset-stat-max {
   font-size: 11px;
@@ -2754,15 +2751,7 @@ body {
 }
 
 /* 删除是破坏性操作：用错误色，且不与「查看」抢注意力 */
-.card-button-danger {
-  border-color: var(--danger-border);
-  color: var(--danger);
-}
-
-.card-button-danger:hover:not(:disabled) {
-  border-color: var(--danger);
-  background: var(--danger-soft);
-}
+/* 注：原 .card-button-danger 已由收藏页的 .asset-remove（次要文字按钮）取代。 */
 
 /* ---------- 占位说明（明确「还没有」的区域） ---------- */
 
@@ -2918,4 +2907,969 @@ body {
   .empty-title {
     font-size: 20px;
   }
+}
+
+/* ============================================================
+   创作者品牌层（2026-09-27 加入）
+   ------------------------------------------------------------
+   抹茶巧克力棒 · 种草实验室：把「工具」改成「个人创作者的工作室」。
+   用色克制 —— 抹茶绿只出现在品牌标识、小抹、以及小抹的主操作上，
+   不参与卡片配色（任务书 4.1 一票否决「多色撞色 / 五卡五配色」）。
+   ============================================================ */
+
+/* ---------- 顶栏品牌标识 ---------- */
+
+.topbar-brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.topbar-brand-mark {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.topbar-brand-name {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+
+.topbar-brand-divider {
+  width: 1px;
+  height: 11px;
+  align-self: center;
+  background: var(--border-strong);
+}
+
+.topbar-brand-lab {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--matcha);
+}
+
+/* ---------- 左栏：创作区标题 ---------- */
+
+.setup-head {
+  padding-bottom: var(--gap-4);
+  margin-bottom: var(--gap-2);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.setup-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.setup-title-mark {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.setup-sub {
+  margin: 7px 0 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+/* ---------- 空状态：欢迎语 ---------- */
+
+.empty-wave {
+  margin-left: 6px;
+}
+
+.empty-lede-strong {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.empty-sub {
+  margin: 10px 0 0;
+  max-width: 44ch;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-muted);
+}
+
+/* ---------- 通用：小抹风格的操作按钮 ---------- */
+
+.insight-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.insight-action:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.insight-action:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.insight-action:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.insight-action:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+/* 主操作（查看完整笔记 / 小抹推荐的动作）：抹茶绿描边，是品牌色唯一的按钮用途 */
+.insight-action-primary {
+  border-color: var(--matcha-border);
+  background: var(--matcha-soft);
+  color: var(--matcha-strong);
+  font-weight: 600;
+}
+
+.insight-action-primary:hover:not(:disabled) {
+  border-color: var(--matcha);
+  background: var(--matcha-soft);
+  color: var(--matcha-strong);
+}
+
+.insight-action-saved {
+  color: var(--success);
+  border-color: var(--success-border);
+  background: var(--success-soft);
+}
+
+/* ---------- 右栏：小抹洞察 ---------- */
+
+.insight {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--gap-5) 18px var(--gap-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+}
+
+.insight-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: var(--gap-4);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+/* 小抹的头像：抹茶绿圆点 + 一个「抹」字。不用 emoji，避免工具感 */
+.insight-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--matcha-soft);
+  border: 1px solid var(--matcha-border);
+  color: var(--matcha-strong);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.insight-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.insight-role {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.insight-greeting {
+  margin: var(--gap-4) 0 0;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+
+/* 未生成时的说明 */
+.insight-empty {
+  margin-top: var(--gap-4);
+  padding: 13px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--text-muted);
+}
+
+.insight-empty p {
+  margin: 0;
+}
+
+.insight-empty-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+/* 聚焦对象 */
+.insight-focus {
+  margin-top: var(--gap-4);
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--matcha-soft);
+  border: 1px solid var(--matcha-border);
+}
+
+.insight-focus-index {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--matcha-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.insight-focus-style {
+  margin-left: 7px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.insight-focus-title {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.insight-focus-angle {
+  margin: 5px 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+/* 洞察小节 */
+.insight-block {
+  margin-top: var(--gap-5);
+}
+
+.insight-block-title {
+  margin: 0 0 9px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--choco);
+}
+
+.insight-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--text-secondary);
+}
+
+.insight-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insight-item {
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+/* 建议来源标注：让用户知道这条是评分建议、AI 味问题还是合规问题 */
+.insight-item-source {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--choco-soft);
+  color: var(--choco);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.insight-risks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-4);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.insight-risk {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.insight-footnote {
+  margin: 9px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+.insight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-2);
+}
+
+/* ---------- 标题优化实验室的说明 ---------- */
+
+.variants-note {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-faint);
+}
+
+/* 内容策略的展开开关：与卡片上的「查看完整笔记」同一视觉语言 */
+.strategy-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 4px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.strategy-toggle:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.strategy-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   创作者工作室：三个资产页 + 创作空间的品牌化
+   ------------------------------------------------------------
+   统一到「抹茶巧克力棒 · 种草实验室」的语言：
+   页眉有眉标、标题是人话而不是后台栏目名、卡片讲用途而不是罗列字段。
+   ============================================================ */
+
+/* ---------- 页面眉标（三个资产页共用） ---------- */
+
+.page-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--choco);
+}
+
+/* ---------- 创作空间：眉标与小抹灵感提示 ---------- */
+
+.setup-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--matcha);
+}
+
+.inspire {
+  display: flex;
+  gap: 10px;
+  margin-top: var(--gap-4);
+  padding: 12px 13px;
+  border-radius: var(--radius-md);
+  background: var(--matcha-soft);
+  border: 1px solid var(--matcha-border);
+}
+
+.inspire-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--matcha-border);
+  color: var(--matcha-strong);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.inspire-body {
+  min-width: 0;
+}
+
+.inspire-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--matcha-strong);
+}
+
+.inspire-text {
+  margin: 5px 0 0;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+/* ---------- 我的创作风格资产 ---------- */
+
+.style-assets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--gap-4);
+}
+
+.style-asset {
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.style-asset:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-float);
+  transform: translateY(-1px);
+}
+
+.style-asset-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap-2);
+}
+
+.style-asset-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* 收藏数：用巧克力棕，与品牌标识同一套次级色 */
+.style-asset-count {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--choco);
+  font-variant-numeric: tabular-nums;
+}
+
+.style-asset-summary {
+  margin: 7px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.style-asset-facts {
+  flex: 1;
+  margin: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.style-asset-fact {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap-3);
+}
+
+.style-asset-fact dt {
+  flex: none;
+  width: 62px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.style-asset-fact dd {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.style-asset-apply {
+  margin-top: var(--gap-4);
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.style-asset-apply:hover:not(:disabled) {
+  border-color: var(--matcha);
+  background: var(--matcha-soft);
+  color: var(--matcha-strong);
+}
+
+.style-asset-apply-on {
+  border-color: var(--success-border);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+/* ---------- 我的创作收藏：分区切换 ---------- */
+
+.asset-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--gap-4);
+  padding-bottom: var(--gap-3);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.asset-tab {
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.asset-tab:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.asset-tab-on {
+  border-color: var(--brand-border);
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 600;
+}
+
+/* ---------- 标题模板 / 封面模板 / 风格资产 的条目 ---------- */
+
+.template-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--gap-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.template-card {
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.template-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-card);
+}
+
+.template-head {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+}
+
+.template-source {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.template-count {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--choco);
+  font-variant-numeric: tabular-nums;
+}
+
+.template-title {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* 「为什么这么写」：AI 给的切入理由 */
+.template-why {
+  margin: 7px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.template-note {
+  margin: var(--gap-4) 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-faint);
+}
+
+/* ---------- 创作旅程（时间线） ----------
+   取代了原先的「作品成长轨迹」条形图：
+   条形长度表示分数而非趋势，只有一天数据时几乎占满整行，容易被误读成"涨得很猛"。
+   时间线只陈述每天发生了什么，不做趋势暗示。 */
+
+.journey {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.journey-item {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap-3);
+  padding: 11px 0 11px 22px;
+}
+
+/* 时间线主轴：最后一项不再往下画 */
+.journey-item::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-hairline);
+}
+
+.journey-item:first-child::before {
+  top: 16px;
+}
+
+.journey-item:last-child::before {
+  bottom: calc(100% - 16px);
+}
+
+/* 节点：抹茶绿，标记"这一天真的发生了事" */
+.journey-dot {
+  position: absolute;
+  left: 0;
+  top: 15px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--matcha);
+  border: 2px solid var(--surface);
+  box-sizing: content-box;
+}
+
+.journey-date {
+  flex: none;
+  width: 46px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--choco);
+  font-variant-numeric: tabular-nums;
+}
+
+.journey-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.journey-line {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.journey-score {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* ============================================================
+   视觉审查后的修正（2026-09-27 第二轮）
+   ------------------------------------------------------------
+   目标：去掉"后台管理感"，把注意力还给内容与品牌。
+   三处后台感的来源：十卡平铺的指标墙、7 行全零的数据表格、每张卡一个红色删除按钮。
+   ============================================================ */
+
+/* ---------- 成长记录：核心两数 + 一行足迹 ---------- */
+
+.hero-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-4);
+}
+
+.hero-metric {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-3);
+  min-width: 200px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.hero-metric-value {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-metric-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hero-metric-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.hero-metric-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* 足迹行：其余计数全部保留，零值只降低对比度 */
+.footprint-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--gap-2);
+  margin: var(--gap-3) 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.footprint {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.footprint-sep {
+  margin-right: var(--gap-2);
+  color: var(--border-strong);
+}
+
+.footprint-value {
+  font-weight: 650;
+  color: var(--choco);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 没发生过的动作：不隐藏（隐藏会让人以为这功能不存在），只退到背景里 */
+.footprint-zero {
+  color: var(--text-faint);
+}
+
+.footprint-zero .footprint-value {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+/* ---------- 我的创作收藏：操作降噪 ---------- */
+
+.asset-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.asset-open:hover {
+  border-color: var(--matcha);
+  background: var(--matcha-soft);
+  color: var(--matcha-strong);
+}
+
+/* 删除：平时只是浅灰文字，悬停才显出危险色 */
+.asset-remove {
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.asset-remove:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* 分数是卡片上唯一的强信号 */
+.asset-score {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.asset-score-max {
+  margin-left: 1px;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+/* ---------- 创作空间：削弱"配置面板"感 ---------- */
+
+/* 分区编号退为极轻的水印，不再像表单字段序号 */
+.field-index {
+  color: var(--text-faint);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+/* 分区间距放宽，给内容留呼吸 */
+.setup-section {
+  padding: 22px 0;
+}
+
+/* ---------- 统一的微交互 ---------- */
+
+/* 所有可点元素按同一节奏反馈，交互动线才像一套系统 */
+.insight-action:active:not(:disabled),
+.asset-open:active,
+.asset-tab:active,
+.style-asset-apply:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+/* 采纳/展开类动作的过渡统一 */
+.card-button,
+.plan-quiet-button,
+.asset-open,
+.asset-remove,
+.insight-action,
+.style-asset-apply {
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- 写下来的习惯（取代分布条卡片） ---------- */
+
+.habit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: var(--gap-4) var(--gap-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.habit-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap-3);
+  margin: 0;
+}
+
+.habit-key {
+  flex: none;
+  width: 96px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.habit-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.habit-unit {
+  margin-left: 1px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.habit-note {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.habit-text {
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-secondary);
 }

@@ -4,6 +4,7 @@
  * 不引入 react-router，用 activeView 轻量切换（依据 V2 决策）。
  */
 
+import { AiInsightPanel } from './components/AiInsightPanel'
 import { ResultPanel } from './components/ResultPanel'
 import { SetupPanel } from './components/SetupPanel'
 import { StatusBar } from './components/StatusBar'
@@ -21,9 +22,11 @@ function Shell() {
       <WorkbenchNav />
 
       {state.activeView === 'workbench' ? (
+        /* 三栏：创作输入 | 爆款方案（核心）| 小抹洞察 */
         <main className="app-main">
           <SetupPanel />
           <ResultPanel />
+          <AiInsightPanel />
         </main>
       ) : (
         <main className="app-main app-main-single">

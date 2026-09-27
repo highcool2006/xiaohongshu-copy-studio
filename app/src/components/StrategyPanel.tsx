@@ -3,14 +3,21 @@
  *
  * 这些值全部来自 API 返回的 strategy；多样性报告由**程序**计算（不交给 AI）。
  * 角度展示的是"这一篇要讲的那一件事"，不是模型内部思考过程。
+ *
+ * 展示策略（2026-09-27）：**默认折叠**，只留一行头部（标题 + 多样性风险）。
+ * 理由：这是"本轮怎么规划的"，属于幕后信息；用户打开工作台想看的是**方案本身**。
+ * 整块铺开时，六行角度列表会把方案卡片挤到首屏之外。多样性风险是唯一需要一眼看到的
+ * 指标（它直接影响这批方案值不值得用），所以留在折叠外的头部。
  */
+
+import { useState } from 'react'
 
 import type { ContentStrategy } from '../../shared/types'
 import { RISK_LABELS } from '../lib/riskLabels'
 
-
 export function StrategyPanel({ strategy }: { strategy: ContentStrategy }) {
   const report = strategy.diversity_report
+  const [open, setOpen] = useState(false)
 
   return (
     <section className="strategy" aria-label="内容策略">
@@ -21,13 +28,28 @@ export function StrategyPanel({ strategy }: { strategy: ContentStrategy }) {
           <span className={`diversity-risk diversity-${report.duplicate_risk}`}>
             重复风险 {RISK_LABELS[report.duplicate_risk]}
           </span>
-          <span className="diversity-detail">
-            角度 {report.angle_types} · 开头 {report.opening_types} · 结构 {report.structure_types} · 结尾{' '}
-            {report.ending_types}
-          </span>
+          {open && (
+            <span className="diversity-detail">
+              角度 {report.angle_types} · 开头 {report.opening_types} · 结构{' '}
+              {report.structure_types} · 结尾 {report.ending_types}
+            </span>
+          )}
         </div>
+        <button
+          type="button"
+          className="strategy-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? '收起' : '本轮怎么规划的'}
+          <span className="summary-caret" aria-hidden="true">
+            {open ? '▴' : '▾'}
+          </span>
+        </button>
       </div>
 
+      {!open ? null : (
+        <>
       <p className="strategy-summary">{strategy.summary}</p>
 
       <div className="strategy-meta">
@@ -70,6 +92,8 @@ export function StrategyPanel({ strategy }: { strategy: ContentStrategy }) {
           </li>
         ))}
       </ol>
+        </>
+      )}
     </section>
   )
 }

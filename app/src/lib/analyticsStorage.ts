@@ -371,6 +371,99 @@ export function aggregateAssets(assets: readonly SavedAsset[]): AssetStats {
   }
 }
 
+/** 成长轨迹上的一个点：某一天收藏的作品，以及它们的内容质量均值 */
+export interface GrowthPoint {
+  /** YYYY-MM-DD（本地时区） */
+  date: string
+  /** 当天收藏的篇数 */
+  count: number
+  /** 当天收藏作品的内容质量均值（四舍五入） */
+  averageScore: number
+}
+
+/**
+ * 作品成长轨迹：把已收藏资产按**收藏日期**聚合，算出每天的内容质量均值。
+ *
+ * 只统计真实发生过的收藏 —— 没有收藏的那天不出现，也不补 0
+ * （补 0 会让曲线看起来像"退步"，而事实只是那天没收藏）。
+ *
+ * 返回按日期升序，便于直接画折线/柱状。
+ */
+export function buildGrowthTrack(assets: readonly SavedAsset[]): GrowthPoint[] {
+  const byDate = new Map<string, { count: number; total: number }>()
+
+  for (const asset of assets) {
+    const date = new Date(asset.savedAt)
+    if (Number.isNaN(date.getTime())) continue
+    // 用本地日期键，避免 UTC 偏移把晚上的收藏算到前一天
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+      date.getDate(),
+    ).padStart(2, '0')}`
+    const bucket = byDate.get(key) ?? { count: 0, total: 0 }
+    bucket.count += 1
+    bucket.total += asset.note.score_total
+    byDate.set(key, bucket)
+  }
+
+  return [...byDate.entries()]
+    .map(([date, bucket]) => ({
+      date,
+      count: bucket.count,
+      averageScore: Math.round(bucket.total / bucket.count),
+    }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1))
+}
+
+/** 成长旅程上的一天：只包含**真的发生了事**的日子 */
+export interface JourneyEntry {
+  /** YYYY-MM-DD */
+  date: string
+  /** 这一天写了几篇 */
+  written: number
+  /** 这一天收藏了几条 */
+  saved: number
+  /** 这一天的标题实验次数 */
+  titleExperiments: number
+  /** 这一天的改写次数 */
+  rewrites: number
+  /** 当天收藏作品的内容质量均值；当天没收藏则为 null */
+  averageScore: number | null
+}
+
+/**
+ * 把最近 N 天的记录整理成一条**成长旅程**。
+ *
+ * 与"逐日表格"的区别：**只保留真正发生过事情的日子**。
+ * 一排 0 的表格是数据后台的写法；旅程只记走过的路 ——
+ * 没创作的那天不出现在时间线上，但会由调用方用一句话说明"这 N 天里有几天在创作"，
+ * 信息不丢，只是不再用表格去渲染"什么都没发生"。
+ *
+ * 返回按日期降序（最近的在上），符合时间线的阅读方向。
+ */
+export function buildJourney(
+  analytics: AnalyticsState,
+  assets: readonly SavedAsset[],
+  now: Date = new Date(),
+): JourneyEntry[] {
+  const scoreByDate = new Map(buildGrowthTrack(assets).map((point) => [point.date, point.averageScore]))
+  const recentKeys = new Set(recentDateKeys(RECENT_DAYS, now))
+
+  return analytics.daily
+    .filter((day) => recentKeys.has(day.date))
+    .map((day) => ({
+      date: day.date,
+      written: day.generate_notes,
+      saved: day.save_asset,
+      titleExperiments: day.title_experiment,
+      rewrites: day.rewrite,
+      averageScore: scoreByDate.get(day.date) ?? null,
+    }))
+    .filter(
+      (entry) => entry.written > 0 || entry.saved > 0 || entry.titleExperiments > 0 || entry.rewrites > 0,
+    )
+    .sort((a, b) => (a.date > b.date ? -1 : 1))
+}
+
 /**
  * 生成看板数据。
  *

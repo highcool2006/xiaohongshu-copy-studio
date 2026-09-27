@@ -22,6 +22,7 @@ import {
 import type { GenerateInput } from '../shared/types.js'
 import {
   AI_NESS_RULES_TEXT,
+  ALLOWED_ANGLE_TYPES_TEXT,
   ALLOWED_STYLES_TEXT,
   COMPLIANCE_RULES_TEXT,
   CONTENT_DIRECTIONS_RULE_TEXT,
@@ -161,7 +162,7 @@ ${NOTE_JSON_SCHEMA_TEXT}
 硬性要求：
 - "notes" 的长度必须等于 total_count；按 "style" 分组后的篇数必须等于 style_allocation。
 - "strategy.angles" 的长度也必须等于 total_count，且每篇的 "angle_id" 都能在 angles 里找到。
-- "angle.type" 只能取 场景 / 人群 / 决策 / 产品 / 对比 / 情绪 / 清单。
+- "angle.type" 只能从这 7 个值中选一个、原样照抄：${ALLOWED_ANGLE_TYPES_TEXT}（不得自创、不得组合、不得照抄整行）。
 - 允许的内容目标：${ALLOWED_GOALS_TEXT}（仅用于策略判断，不需要在输出里回填）。
 
 ${SAFETY_SECTION}`

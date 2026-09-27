@@ -27,7 +27,15 @@ export function WorkbenchNav() {
 
   return (
     <header className="topbar">
-      <div className="topbar-brand">种草工坊</div>
+      {/* 创作者品牌：抹茶巧克力棒 · 种草实验室。不用通用 AI 工具的中性命名 */}
+      <div className="topbar-brand">
+        <span className="topbar-brand-mark" aria-hidden="true">
+          🍵
+        </span>
+        <span className="topbar-brand-name">抹茶巧克力棒</span>
+        <span className="topbar-brand-divider" aria-hidden="true" />
+        <span className="topbar-brand-lab">种草实验室</span>
+      </div>
 
       <nav className="topbar-tabs" aria-label="主导航">
         {VIEWS.map((view) => (
@@ -43,20 +51,27 @@ export function WorkbenchNav() {
         ))}
       </nav>
 
-      <div className="topbar-stats" aria-label="本次会话统计">
-        <div className="topbar-stat">
-          <span className="topbar-stat-value">{notes.length > 0 ? notes.length : '—'}</span>
-          <span className="topbar-stat-label">本次生成</span>
-        </div>
-        <div className="topbar-stat">
-          <span className="topbar-stat-value">{averageQuality ?? '—'}</span>
-          <span className="topbar-stat-label">平均内容质量</span>
-        </div>
-        <div className="topbar-stat">
-          <span className="topbar-stat-value">{duration ?? '—'}</span>
-          <span className="topbar-stat-label">上次耗时</span>
-        </div>
-      </div>
+      {/*
+        会话统计合并成一行轻量文字。
+        原先三个独立小卡（本次生成 / 平均内容质量 / 上次耗时）在顶栏右侧排成一组数字，
+        读起来像系统监控面板 —— 信息本身保留，只是不再抢品牌标识与导航的注意力。
+        「上次耗时」是唯一偏工程向的一项，退到行末。
+      */}
+      <p className="topbar-stats" aria-label="本次会话统计">
+        {notes.length > 0 ? (
+          <>
+            <span className="topbar-stat">
+              本次 <span className="topbar-stat-value">{notes.length}</span> 篇
+            </span>
+            <span className="topbar-stat">
+              平均 <span className="topbar-stat-value">{averageQuality}</span> 分
+            </span>
+            {duration !== null && <span className="topbar-stat topbar-stat-quiet">用时 {duration}</span>}
+          </>
+        ) : (
+          <span className="topbar-stat topbar-stat-quiet">今天还没有开始创作</span>
+        )}
+      </p>
     </header>
   )
 }

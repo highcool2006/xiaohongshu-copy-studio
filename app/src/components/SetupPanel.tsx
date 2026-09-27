@@ -31,6 +31,35 @@ import { ReferencePanel } from './ReferencePanel'
 const FIELD_ORDER: FormField[] = ['product', 'sellingPoints', 'styles', 'count']
 
 /**
+ * 小抹灵感提示：按当前填写状态给一条**可执行**的建议。
+ *
+ * 边界：这里说的是「你这一步可以怎么填」，不是对小抹输入的分析结论 ——
+ * 生成前的任何"洞察"都只能是编的，那正是本产品禁止的事。
+ * 文案里提到的规则都与 Prompt 层的真实约束一致（例如不编造经历、多风格差异更明显）。
+ */
+function inspireTip(profile: {
+  product: string
+  sellingPoints: string[]
+  personalMaterial: string
+  styles: string[]
+  directions: string[]
+}): string {
+  if (profile.sellingPoints.length === 0) {
+    return '先把卖点写下来。「3秒速溶」比「方便快捷」能撑起的内容多得多 —— 越具体，越好写。'
+  }
+  if (profile.personalMaterial.trim().length === 0) {
+    return '想让它更像你自己写的，把真实经历填进「补充真实细节」。我不会替你编经历 —— 那是这类文案最容易翻车的地方。'
+  }
+  if (profile.styles.length < 2) {
+    return '试试多选两种风格。同一批里风格差异越明显，"这几篇不像同一个模子"的感觉越强。'
+  }
+  if (profile.directions.length === 0) {
+    return '方向可以留空，我来定；也可以在上面勾几个，那样出来的方案会更贴着你想讲的点。'
+  }
+  return `信息和方向都齐了。${profile.product.length > 0 ? `「${profile.product}」` : '这个产品'}现在可以出方案了。`
+}
+
+/**
  * 文案类型的一句话说明（UI 展示用，不参与生成）。
  *
  * ⚠️ 这里只讲「这篇讲什么」，不讲「怎么写」——怎么写由文案风格负责。
@@ -94,6 +123,24 @@ export function SetupPanel() {
 
   return (
     <section className="setup" aria-label="创作设置">
+      {/* 创作区标题：把「填表单」重新框成「跟搭子说今天想做什么」 */}
+      <header className="setup-head">
+        <p className="setup-eyebrow">小抹在等你</p>
+        <h1 className="setup-title">今天想创造什么？</h1>
+        <p className="setup-sub">把产品和卖点交给我，我按你选的方向，写成值得分享的样子。</p>
+      </header>
+
+      {/* 小抹灵感提示：跟着当前填写状态走，说的是「你这一步可以做什么」，不是分析结果 */}
+      <div className="inspire">
+        <span className="inspire-avatar" aria-hidden="true">
+          抹
+        </span>
+        <div className="inspire-body">
+          <p className="inspire-title">小抹灵感提示</p>
+          <p className="inspire-text">{inspireTip(profile)}</p>
+        </div>
+      </div>
+
       {/* 01 产品信息 */}
       <div className="setup-section">
         <div className="section-head">
@@ -311,7 +358,7 @@ export function SetupPanel() {
       <div className="setup-section">
         <div className="section-head">
           <span className="field-index">05</span>
-          <h2 className="section-title">内容方向</h2>
+          <h2 className="section-title">我的创作方向</h2>
         </div>
         <div className="chip-group">
           {CONTENT_DIRECTIONS.map((direction: ContentDirection) => {
@@ -499,8 +546,8 @@ export function SetupPanel() {
             void submitGenerate()
           }}
         >
-          <span className="cta-label">{isLoading ? '正在生成…' : '生成文案'}</span>
-          {!isLoading && <span className="cta-sub">生成 {profile.count} 篇</span>}
+          <span className="cta-label">{isLoading ? '正在生成…' : '生成爆款方案'}</span>
+          {!isLoading && <span className="cta-sub">出 {profile.count} 套方案</span>}
         </button>
       </div>
 

@@ -401,6 +401,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           compliance_risk: (card?.complianceCheck ?? note.compliance).risk_level,
           ai_ness_risk: note.ai_ness.risk_level,
         },
+        // 封面建议随笔记一起收藏，资产库的「封面模板」据此聚合
+        cover_suggestion: note.cover_suggestion,
         title_experiment: {
           original_title: card?.originalTitle ?? null,
           variants: card?.titleVariants === null || card?.titleVariants === undefined ? [] : [...card.titleVariants],

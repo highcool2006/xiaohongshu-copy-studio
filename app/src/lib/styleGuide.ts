@@ -30,7 +30,7 @@ export const STYLE_GUIDE: Record<Style, StyleGuideEntry> = {
     summary: '像朋友推荐',
     fit: '日常推荐、朋友视角的经验分享',
     language: '口语、短句、有停顿',
-    structure: '一条经历线，不列点',
+    structure: '一条叙事线，不列点',
   },
   专业测评: {
     summary: '理性分析',
@@ -54,7 +54,7 @@ export const STYLE_GUIDE: Record<Style, StyleGuideEntry> = {
     summary: '先讲情绪',
     fit: '生活方式、情绪表达',
     language: '中短句，真诚克制',
-    structure: '情绪铺垫 → 产品为落点',
+    structure: '情绪铺垫 → 落到产品卖点',
   },
   清单种草: {
     summary: '条目清晰',

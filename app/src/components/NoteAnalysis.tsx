@@ -50,7 +50,7 @@ export function NoteAnalysis({
       {angle && (
         <section className="analysis-section">
           <h4 className="analysis-heading">创作角度</h4>
-          <p className="note-angle">本篇讲的是：{angle.core_idea}</p>
+          {/* 点题句已上移到卡片正文区，这里只留角度类型与写作路径，避免重复 */}
           <div className="analysis-chips">
             <span className="chip chip-angle">角度 · {angle.type}</span>
             {note.content_directions.map((direction) => (
