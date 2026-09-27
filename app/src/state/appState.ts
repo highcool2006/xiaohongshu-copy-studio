@@ -101,6 +101,15 @@ export interface AppState {
     /** 卖点输入框的当前内容（尚未成为标签） */
     sellingPointDraft: string
     additionalInfo: string
+    /**
+     * 我的素材：用户自己写的真实经历 / 细节 / 感受。
+     *
+     * 这是产出「真实小红书笔记」的关键输入：产品参数只能支撑决策建议，
+     * 第一人称的真实细节只能由用户提供。为空时生成结果会退回通用建议。
+     */
+    personalMaterial: string
+    /** 我是谁：身份 / 口吻 / 立场（只影响语气，不构成事实） */
+    personaNote: string
     targetUsers: string[]
     scenarios: string[]
     goal: ContentGoal
@@ -157,6 +166,8 @@ export const initialAppState: AppState = {
     sellingPoints: [],
     sellingPointDraft: '',
     additionalInfo: '',
+    personalMaterial: '',
+    personaNote: '',
     targetUsers: [],
     scenarios: [],
     goal: '种草',
@@ -192,6 +203,8 @@ export type AppAction =
   | { type: 'ADD_SELLING_POINTS'; values: string[] }
   | { type: 'REMOVE_SELLING_POINT'; value: string }
   | { type: 'SET_ADDITIONAL_INFO'; value: string }
+  | { type: 'SET_PERSONAL_MATERIAL'; value: string }
+  | { type: 'SET_PERSONA_NOTE'; value: string }
   | { type: 'SET_REFERENCE_TEXT'; value: string }
   | { type: 'TOGGLE_TARGET_USER'; value: string }
   | { type: 'TOGGLE_SCENARIO'; value: string }
@@ -335,6 +348,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
     case 'SET_ADDITIONAL_INFO':
       return { ...state, profile: { ...state.profile, additionalInfo: action.value } }
+    case 'SET_PERSONAL_MATERIAL':
+      return { ...state, profile: { ...state.profile, personalMaterial: action.value } }
+    case 'SET_PERSONA_NOTE':
+      return { ...state, profile: { ...state.profile, personaNote: action.value } }
     case 'SET_REFERENCE_TEXT':
       return { ...state, profile: { ...state.profile, referenceText: action.value } }
     case 'TOGGLE_TARGET_USER':

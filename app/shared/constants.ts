@@ -43,6 +43,16 @@ export const PRODUCT_MAX_LENGTH = 100
 export const PRODUCT_CATEGORY_MAX_LENGTH = 40
 export const ADDITIONAL_INFO_MAX_LENGTH = 1000
 
+/**
+ * 我的素材（用户的真实经历）。
+ *
+ * 放宽到 2000：这一段是产出「真实笔记」而非「运营建议」的关键输入，
+ * 用户写得越具体（时间、地点、当时的反应、对话、数字）结果越好，不应过早截断。
+ */
+export const PERSONAL_MATERIAL_MAX_LENGTH = 2000
+/** 我是谁（身份 / 口吻），一句话即可 */
+export const PERSONA_NOTE_MAX_LENGTH = 60
+
 export const SELLING_POINT_MAX_LENGTH = 50
 export const SELLING_POINTS_MAX_ITEMS = 20
 
@@ -56,8 +66,15 @@ export const REFERENCE_TEXT_MAX_LENGTH = 4000
 
 export const TITLE_MAX_LENGTH = 60
 export const BODY_MAX_LENGTH = 3000
-export const HASHTAG_MAX_ITEMS = 5
-export const HASHTAG_MIN_ITEMS = 3
+
+/**
+ * 话题标签数量（3~5 → 5~10）。
+ *
+ * 真实小红书笔记的标签通常在 5~10 个，且分三层（品类大词 / 精准场景词 / 长尾情绪词）。
+ * 这里只放宽数量上限，分层要求属写作规范，见 prompts/shared.ts 的 NOTE_ANATOMY_TEXT。
+ */
+export const HASHTAG_MAX_ITEMS = 10
+export const HASHTAG_MIN_ITEMS = 5
 export const HASHTAG_MAX_LENGTH = 20
 export const CONTENT_DIRECTIONS_MAX_ITEMS = 8
 

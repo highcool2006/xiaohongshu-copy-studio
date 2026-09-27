@@ -31,6 +31,8 @@ import {
   HASHTAG_MIN_ITEMS,
   HOOK_TYPE_MAX_LENGTH,
   IMPROVEMENT_MAX_LENGTH,
+  PERSONAL_MATERIAL_MAX_LENGTH,
+  PERSONA_NOTE_MAX_LENGTH,
   PRODUCT_CATEGORY_MAX_LENGTH,
   PRODUCT_MAX_LENGTH,
   REFERENCE_TEXT_MAX_LENGTH,
@@ -269,6 +271,17 @@ export function validateGenerateInput(raw: unknown): ValidationResult<GenerateIn
   const additionalInfo = validateOptionalText(raw.additional_info, 'additional_info', ADDITIONAL_INFO_MAX_LENGTH)
   if (!additionalInfo.ok) return additionalInfo
 
+  // 我的素材（可选，但它是「真实笔记」的关键输入）
+  const personalMaterial = validateOptionalText(
+    raw.personal_material,
+    'personal_material',
+    PERSONAL_MATERIAL_MAX_LENGTH,
+  )
+  if (!personalMaterial.ok) return personalMaterial
+
+  const personaNote = validateOptionalText(raw.persona_note, 'persona_note', PERSONA_NOTE_MAX_LENGTH)
+  if (!personaNote.ok) return personaNote
+
   const targetUsers = validateStringList(raw.target_users, {
     field: 'target_users',
     message: MESSAGES.targetUsersInvalid,
@@ -320,6 +333,8 @@ export function validateGenerateInput(raw: unknown): ValidationResult<GenerateIn
       content_directions_preference: directionsPreference,
       ...(category.value === undefined ? {} : { product_category: category.value }),
       ...(additionalInfo.value === undefined ? {} : { additional_info: additionalInfo.value }),
+      ...(personalMaterial.value === undefined ? {} : { personal_material: personalMaterial.value }),
+      ...(personaNote.value === undefined ? {} : { persona_note: personaNote.value }),
       ...(referenceText.value === undefined ? {} : { reference_text: referenceText.value }),
     },
   }
@@ -409,6 +424,17 @@ export function validateRewriteInput(raw: unknown): ValidationResult<RewriteRequ
   const sellingPoints = validateSellingPoints(raw.selling_points)
   if (!sellingPoints.ok) return sellingPoints
 
+  // 我的素材（可选）：与 generate 同一份输入，重写时继续沿用
+  const personalMaterial = validateOptionalText(
+    raw.personal_material,
+    'personal_material',
+    PERSONAL_MATERIAL_MAX_LENGTH,
+  )
+  if (!personalMaterial.ok) return personalMaterial
+
+  const personaNote = validateOptionalText(raw.persona_note, 'persona_note', PERSONA_NOTE_MAX_LENGTH)
+  if (!personaNote.ok) return personaNote
+
   if (!isStyle(raw.target_style)) {
     return failure('INVALID_INPUT', MESSAGES.targetStyleInvalid, 'target_style')
   }
@@ -434,6 +460,8 @@ export function validateRewriteInput(raw: unknown): ValidationResult<RewriteRequ
     value: {
       product: product.value,
       selling_points: sellingPoints.value,
+      ...(personalMaterial.value === undefined ? {} : { personal_material: personalMaterial.value }),
+      ...(personaNote.value === undefined ? {} : { persona_note: personaNote.value }),
       target_style: raw.target_style,
       current_note: currentNote.value,
       ...(angleId === undefined ? {} : { angle_id: angleId }),

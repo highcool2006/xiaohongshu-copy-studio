@@ -43,6 +43,8 @@ export async function requestGenerate(input: GenerateInput): Promise<GenerateApi
     count: input.count,
     product_category: input.product_category,
     additional_info: input.additional_info,
+    personal_material: input.personal_material,
+    persona_note: input.persona_note,
     target_users: input.target_users,
     scenarios: input.scenarios,
     goal: input.goal,

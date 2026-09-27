@@ -1,7 +1,8 @@
 /**
  * 左栏：创作设置（V2）。
  *
- * 分区：01 产品信息 · 02 目标用户 · 03 内容目标 · 04 内容方向 · 05 文案风格 · 06 生成 · 07 参考文案
+ * 分区：01 产品信息 · 02 我的素材 · 03 目标用户 · 04 内容目标 · 05 内容方向
+ *      · 06 使用场景 · 07 文案风格 · 08 生成数量 · 参考文案
  *
  * 设计目标：用户进入后 10～20 秒内能明白「填什么 → 选什么 → 点哪里」。
  * 高级项（补充信息、参考文案）默认折叠，控制左侧密度。
@@ -173,10 +174,53 @@ export function SetupPanel() {
         )}
       </div>
 
-      {/* 02 目标用户 */}
-      <div className="setup-section">
+      {/* 02 我的素材 —— 决定结果是「真实小红书笔记」还是「通用运营建议」 */}
+      <div className="setup-section setup-section-key">
         <div className="section-head">
           <span className="field-index">02</span>
+          <h2 className="section-title">我的素材</h2>
+        </div>
+
+        <p className="field-hint field-hint-strong">
+          写下<strong>你自己</strong>的真实经历：什么时候、在哪里、发生了什么、你当时的反应。
+          具体到能拍出照片最好。
+        </p>
+
+        <textarea
+          className="control control-area"
+          rows={6}
+          value={profile.personalMaterial}
+          placeholder={
+            '例如：\n上周三下午在工位犯困，从抽屉里翻出这根抹茶巧克力棒。\n第一口比想象中苦，抹茶味压过了甜，我愣了一下才反应过来。\n后来配美式吃，反而觉得刚好。\n分给隔壁同事，她说像在喝抹茶拿铁。'
+          }
+          onChange={(event) => dispatch({ type: 'SET_PERSONAL_MATERIAL', value: event.target.value })}
+        />
+
+        <p className="field-hint">
+          这是第一人称细节的<strong>唯一来源</strong>。留空也能生成，但结果会退回「怎么挑 / 怎么判断」
+          这类通用建议——那正是运营建议的样子。
+        </p>
+
+        <div className="field-block">
+          <label className="field-label" htmlFor="persona-note">
+            我是谁 <span className="field-optional">可选</span>
+          </label>
+          <input
+            id="persona-note"
+            className="control"
+            type="text"
+            value={profile.personaNote}
+            placeholder="例如：上班族，说话比较直接"
+            onChange={(event) => dispatch({ type: 'SET_PERSONA_NOTE', value: event.target.value })}
+          />
+          <p className="field-hint">只影响说话的语气，不构成事实。</p>
+        </div>
+      </div>
+
+      {/* 03 目标用户 */}
+      <div className="setup-section">
+        <div className="section-head">
+          <span className="field-index">03</span>
           <h2 className="section-title">目标用户</h2>
         </div>
         <div className="chip-group">
@@ -226,10 +270,10 @@ export function SetupPanel() {
         <p className="field-hint">不选也可以：AI 会根据产品信息给出推测的人群假设</p>
       </div>
 
-      {/* 03 内容目标 */}
+      {/* 04 内容目标 */}
       <div className="setup-section">
         <div className="section-head">
-          <span className="field-index">03</span>
+          <span className="field-index">04</span>
           <h2 className="section-title">内容目标</h2>
         </div>
         <div className="chip-group">
@@ -247,10 +291,10 @@ export function SetupPanel() {
         </div>
       </div>
 
-      {/* 04 内容方向 */}
+      {/* 05 内容方向 */}
       <div className="setup-section">
         <div className="section-head">
-          <span className="field-index">04</span>
+          <span className="field-index">05</span>
           <h2 className="section-title">内容方向</h2>
         </div>
         <div className="chip-group">
@@ -272,10 +316,10 @@ export function SetupPanel() {
         <p className="field-hint">不选则由 AI 根据产品自行规划</p>
       </div>
 
-      {/* 05 使用场景 */}
+      {/* 06 使用场景 */}
       <div className="setup-section">
         <div className="section-head">
-          <span className="field-index">05</span>
+          <span className="field-index">06</span>
           <h2 className="section-title">使用场景</h2>
         </div>
         <div className="chip-group">
@@ -324,10 +368,10 @@ export function SetupPanel() {
         </div>
       </div>
 
-      {/* 06 文案风格 */}
+      {/* 07 文案风格 */}
       <div className="setup-section">
         <div className="section-head">
-          <span className="field-index">06</span>
+          <span className="field-index">07</span>
           <h2 className="section-title">文案风格</h2>
           <span className="field-required">必填</span>
         </div>
@@ -355,10 +399,10 @@ export function SetupPanel() {
         {errors.styles && <p className="field-error">{errors.styles}</p>}
       </div>
 
-      {/* 07 生成数量 + 主按钮 */}
+      {/* 08 生成数量 + 主按钮 */}
       <div className="setup-section setup-section-last">
         <div className="section-head">
-          <span className="field-index">07</span>
+          <span className="field-index">08</span>
           <h2 className="section-title">生成数量</h2>
         </div>
         <div className="stepper">

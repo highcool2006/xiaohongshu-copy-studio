@@ -168,6 +168,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       count: profile.count,
       product_category: profile.category,
       additional_info: profile.additionalInfo,
+      personal_material: profile.personalMaterial,
+      persona_note: profile.personaNote,
       target_users: profile.targetUsers,
       scenarios: profile.scenarios,
       goal: profile.goal,
@@ -237,6 +239,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const result = await requestRewrite({
         product: profile.product,
         selling_points: effectiveSellingPoints(profile),
+        // 与 generate 用同一份素材：换风格只换写法，不丢真实细节
+        personal_material: profile.personalMaterial,
+        persona_note: profile.personaNote,
         target_style: card.targetStyle,
         angle_id: note.angle_id,
         current_note: {

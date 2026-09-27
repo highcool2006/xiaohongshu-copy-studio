@@ -18,6 +18,10 @@ import { getMockRewriteResponse } from './mockRewrite'
 export interface RewritePayload {
   product: string
   selling_points: string[]
+  /** 我的素材：与 generate 同一份输入，重写时继续沿用，避免真实细节被丢掉 */
+  personal_material?: string
+  /** 我是谁：身份 / 口吻 / 立场 */
+  persona_note?: string
   target_style: Style
   current_note: {
     title: string

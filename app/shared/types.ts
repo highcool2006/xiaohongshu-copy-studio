@@ -136,6 +136,21 @@ export interface ProductProfile {
   category?: string
   selling_points: string[]
   additional_info?: string
+  /**
+   * 我的素材：用户自己写下的真实经历、细节与感受。
+   *
+   * **这是唯一允许第一人称体验（感官、亲历、真实场景细节）的事实来源。**
+   * 产品参数只能支撑"决策建议"体裁；要产出真正的小红书笔记，
+   * 必须由用户提供"我这个人在什么时候、经历了什么"。
+   * 未提供时，AI 一律不得自行补齐（见 prompts/shared.ts 的语义级事实边界）。
+   */
+  personal_material?: string
+  /**
+   * 我是谁：身份 / 口吻 / 立场（例如「上班族，说话比较直」）。
+   *
+   * 只影响第一人称的**语气**，本身不构成事实，不得从中推导出经历。
+   */
+  persona_note?: string
   /** 预设见 TARGET_USER_PRESETS；允许自定义值 */
   target_users: string[]
   /** 预设见 SCENARIO_PRESETS；允许自定义值 */
@@ -156,6 +171,10 @@ export interface GenerateRequest {
   count?: number
   product_category?: string
   additional_info?: string
+  /** 我的素材：第一人称真实经历（唯一允许第一人称体验的事实来源） */
+  personal_material?: string
+  /** 我是谁：身份 / 口吻 / 立场 */
+  persona_note?: string
   target_users?: string[]
   scenarios?: string[]
   goal?: ContentGoal
@@ -177,6 +196,10 @@ export interface GenerateInput {
   content_directions_preference: ContentDirection[]
   product_category?: string
   additional_info?: string
+  /** 我的素材：第一人称真实经历 */
+  personal_material?: string
+  /** 我是谁：身份 / 口吻 / 立场 */
+  persona_note?: string
   reference_text?: string
 }
 
@@ -198,6 +221,16 @@ export interface GenerateResponse {
 export interface RewriteRequest {
   product: string
   selling_points: string[]
+  /**
+   * 我的素材（可选）。
+   *
+   * 与 generate 用同一份输入：换风格重写是「同一篇的另一种写法」，
+   * 若原笔记建立在用户的真实经历上，重写必须能继续使用这些细节，
+   * 否则重写后会退回通用建议，与首次生成的口径不一致。
+   */
+  personal_material?: string
+  /** 我是谁：身份 / 口吻 / 立场 */
+  persona_note?: string
   /** 目标新风格；与 current_note.style（当前风格）区分 */
   target_style: Style
   current_note: CurrentNote
@@ -303,6 +336,8 @@ export type ErrorField =
   | 'product_category'
   | 'selling_points'
   | 'additional_info'
+  | 'personal_material'
+  | 'persona_note'
   /** /api/generate 的所选风格（多个） */
   | 'styles'
   /** /api/score 的当前风格（单个） */
