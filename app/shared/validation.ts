@@ -54,14 +54,16 @@ import {
   TITLE_VARIANT_TYPE_MAX_LENGTH,
 } from './constants.js'
 import {
+  COPY_TYPE_DEFAULT,
   isAngleType,
   isContentDirection,
   isContentGoal,
+  isCopyType,
   isRiskLevel,
   isStyle,
   sortStyles,
 } from './enums.js'
-import type { ContentDirection, Style } from './enums.js'
+import type { ContentDirection, CopyType, Style } from './enums.js'
 import type {
   AiNote,
   ApiError,
@@ -225,6 +227,22 @@ function validateGoal(value: unknown): ValidationResult<GenerateInput['goal']> {
   return { ok: true, value }
 }
 
+/**
+ * 文案类型（体裁）。
+ *
+ * 与 goal 同一处理方式：缺省不报错，回落默认值。
+ * 单选控件不会产生空值，因此"未选择"只可能来自旧客户端或手工构造的请求。
+ */
+function validateCopyType(value: unknown): ValidationResult<CopyType> {
+  if (value === undefined || value === null || value === '') {
+    return { ok: true, value: COPY_TYPE_DEFAULT }
+  }
+  if (!isCopyType(value)) {
+    return failure('INVALID_INPUT', '文案类型不在允许范围内', 'copy_type')
+  }
+  return { ok: true, value }
+}
+
 function validateOptionalText(
   value: unknown,
   field: ErrorField,
@@ -303,6 +321,9 @@ export function validateGenerateInput(raw: unknown): ValidationResult<GenerateIn
   const goal = validateGoal(raw.goal)
   if (!goal.ok) return goal
 
+  const copyType = validateCopyType(raw.copy_type)
+  if (!copyType.ok) return copyType
+
   const referenceText = validateOptionalText(raw.reference_text, 'reference_text', REFERENCE_TEXT_MAX_LENGTH)
   if (!referenceText.ok) return referenceText
 
@@ -330,6 +351,7 @@ export function validateGenerateInput(raw: unknown): ValidationResult<GenerateIn
       target_users: targetUsers.value,
       scenarios: scenarios.value,
       goal: goal.value,
+      copy_type: copyType.value,
       content_directions_preference: directionsPreference,
       ...(category.value === undefined ? {} : { product_category: category.value }),
       ...(additionalInfo.value === undefined ? {} : { additional_info: additionalInfo.value }),

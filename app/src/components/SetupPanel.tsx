@@ -1,8 +1,8 @@
 /**
  * 左栏：创作设置（V2）。
  *
- * 分区：01 产品信息 · 02 我的素材 · 03 目标用户 · 04 内容目标 · 05 内容方向
- *      · 06 使用场景 · 07 文案风格 · 08 生成数量 · 参考文案
+ * 分区：01 产品信息 · 02 补充真实细节 · 03 目标用户 · 04 内容目标 · 05 内容方向
+ *      · 06 使用场景 · 07 文案类型 · 08 文案风格 · 09 生成数量 · 参考文案
  *
  * 设计目标：用户进入后 10～20 秒内能明白「填什么 → 选什么 → 点哪里」。
  * 高级项（补充信息、参考文案）默认折叠，控制左侧密度。
@@ -15,11 +15,12 @@ import { COUNT_MAX } from '../../shared/constants'
 import {
   CONTENT_DIRECTIONS,
   CONTENT_GOALS,
+  COPY_TYPES,
   SCENARIO_PRESETS,
   STYLES,
   TARGET_USER_PRESETS,
 } from '../../shared/enums'
-import type { ContentDirection, ContentGoal, Style } from '../../shared/enums'
+import type { ContentDirection, ContentGoal, CopyType, Style } from '../../shared/enums'
 import { minCountForStyles } from '../../shared/validation'
 import { STYLE_GUIDE } from '../lib/styleGuide'
 import { useApp } from '../state/AppProvider'
@@ -28,6 +29,20 @@ import type { FormField } from '../state/appState'
 import { ReferencePanel } from './ReferencePanel'
 
 const FIELD_ORDER: FormField[] = ['product', 'sellingPoints', 'styles', 'count']
+
+/**
+ * 文案类型的一句话说明（UI 展示用，不参与生成）。
+ *
+ * ⚠️ 这里只讲「这篇讲什么」，不讲「怎么写」——怎么写由文案风格负责。
+ *    提示词侧的体裁手册在 app/prompts/shared.ts 的 COPY_TYPE_PLAYBOOK。
+ */
+const COPY_TYPE_GUIDE: Record<CopyType, string> = {
+  强种草推荐: '把一个核心卖点讲成想拥有的理由',
+  产品测评: '结论前置，逐维度说清值不值得',
+  平价好物分享: '讲同等条件下的取舍逻辑',
+  避坑对比: '先说清什么样的选法会踩坑',
+  使用攻略: '什么时候用、怎么用，步骤化',
+}
 
 export function SetupPanel() {
   const { state, dispatch, submitGenerate, submitReferenceAnalyze } = useApp()
@@ -174,31 +189,31 @@ export function SetupPanel() {
         )}
       </div>
 
-      {/* 02 我的素材 —— 决定结果是「真实小红书笔记」还是「通用运营建议」 */}
+      {/* 02 补充真实细节 —— 增强可信度，不主导内容 */}
       <div className="setup-section setup-section-key">
         <div className="section-head">
           <span className="field-index">02</span>
-          <h2 className="section-title">我的素材</h2>
+          <h2 className="section-title">补充真实细节</h2>
+          <span className="field-optional">可选</span>
         </div>
 
         <p className="field-hint field-hint-strong">
-          写下<strong>你自己</strong>的真实经历：什么时候、在哪里、发生了什么、你当时的反应。
-          具体到能拍出照片最好。
+          填了它，文案会更具体可信；<strong>不填也能生成</strong>，内容由产品信息承担。
         </p>
 
         <textarea
           className="control control-area"
-          rows={6}
+          rows={5}
           value={profile.personalMaterial}
           placeholder={
-            '例如：\n上周三下午在工位犯困，从抽屉里翻出这根抹茶巧克力棒。\n第一口比想象中苦，抹茶味压过了甜，我愣了一下才反应过来。\n后来配美式吃，反而觉得刚好。\n分给隔壁同事，她说像在喝抹茶拿铁。'
+            '例如：\n上周三下午在工位犯困，从抽屉里翻出这根抹茶巧克力棒。\n第一口比想象中苦，抹茶味压过了甜，我愣了一下才反应过来。\n后来配美式吃，反而觉得刚好。'
           }
           onChange={(event) => dispatch({ type: 'SET_PERSONAL_MATERIAL', value: event.target.value })}
         />
 
         <p className="field-hint">
-          这是第一人称细节的<strong>唯一来源</strong>。留空也能生成，但结果会退回「怎么挑 / 怎么判断」
-          这类通用建议——那正是运营建议的样子。
+          这是感官细节与具体经历的<strong>唯一来源</strong>——不填时 AI 不得编写这类内容。
+          素材只用来补充细节增强可信度，正文主干仍是产品卖点。
         </p>
 
         <div className="field-block">
@@ -368,10 +383,39 @@ export function SetupPanel() {
         </div>
       </div>
 
-      {/* 07 文案风格 */}
+      {/* 07 文案类型（体裁，单选） */}
       <div className="setup-section">
         <div className="section-head">
           <span className="field-index">07</span>
+          <h2 className="section-title">文案类型</h2>
+          <span className="field-required">必填</span>
+        </div>
+        <div className="style-grid">
+          {COPY_TYPES.map((type: CopyType) => {
+            const selected = profile.copyType === type
+            return (
+              <button
+                key={type}
+                type="button"
+                className={selected ? 'style-card style-card-selected' : 'style-card'}
+                aria-pressed={selected}
+                onClick={() => dispatch({ type: 'SET_COPY_TYPE', value: type })}
+              >
+                <span className="style-card-name">{type}</span>
+                <span className="style-card-desc">{COPY_TYPE_GUIDE[type]}</span>
+              </button>
+            )
+          })}
+        </div>
+        <p className="field-hint">
+          决定这篇「讲什么、不讲什么」（体裁）。与下面的「文案风格」分层——风格只决定「怎么说」。
+        </p>
+      </div>
+
+      {/* 08 文案风格 */}
+      <div className="setup-section">
+        <div className="section-head">
+          <span className="field-index">08</span>
           <h2 className="section-title">文案风格</h2>
           <span className="field-required">必填</span>
         </div>
@@ -399,10 +443,10 @@ export function SetupPanel() {
         {errors.styles && <p className="field-error">{errors.styles}</p>}
       </div>
 
-      {/* 08 生成数量 + 主按钮 */}
+      {/* 09 生成数量 + 主按钮 */}
       <div className="setup-section setup-section-last">
         <div className="section-head">
-          <span className="field-index">08</span>
+          <span className="field-index">09</span>
           <h2 className="section-title">生成数量</h2>
         </div>
         <div className="stepper">

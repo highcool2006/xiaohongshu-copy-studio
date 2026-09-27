@@ -48,6 +48,7 @@ export async function requestGenerate(input: GenerateInput): Promise<GenerateApi
     target_users: input.target_users,
     scenarios: input.scenarios,
     goal: input.goal,
+    copy_type: input.copy_type,
     reference_text: input.reference_text,
     content_directions_preference: input.content_directions_preference,
   })

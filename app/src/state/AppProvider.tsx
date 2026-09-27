@@ -173,6 +173,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       target_users: profile.targetUsers,
       scenarios: profile.scenarios,
       goal: profile.goal,
+      copy_type: profile.copyType,
       reference_text: profile.referenceText,
       content_directions_preference: profile.directions,
     }

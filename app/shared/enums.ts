@@ -79,6 +79,34 @@ export const CONTENT_GOALS = [
 
 export type ContentGoal = (typeof CONTENT_GOALS)[number]
 
+/* ---------- 文案类型（单选；体裁控制） ---------- */
+
+/**
+ * 文案类型 = 这篇文案的**体裁**：讲什么、不讲什么、按什么结构组织。
+ *
+ * 与另外两个控制项的三层关系（提示词中有同一条规则，勿改其一）：
+ *   - 文案类型（本枚举）：体裁与内容取舍
+ *   - 内容目标 CONTENT_GOALS：这篇内容要达成什么意图
+ *   - 文案风格 STYLES：语气与句式（怎么写）
+ * 冲突时以**文案类型**为准。
+ */
+export const COPY_TYPES = [
+  '强种草推荐',
+  '产品测评',
+  '平价好物分享',
+  '避坑对比',
+  '使用攻略',
+] as const
+
+export type CopyType = (typeof COPY_TYPES)[number]
+
+/**
+ * 文案类型默认值（单选控件不会出现空值）。
+ *
+ * 三个消费方必须一致：前端初始 state、后端校验缺省、提示词兜底。
+ */
+export const COPY_TYPE_DEFAULT: CopyType = '强种草推荐'
+
 /** 创作角度类型（每篇一个 angle.type） */
 export const ANGLE_TYPES = ['场景', '人群', '决策', '产品', '对比', '情绪', '清单'] as const
 
@@ -105,6 +133,10 @@ export function isContentGoal(value: unknown): value is ContentGoal {
 
 export function isAngleType(value: unknown): value is AngleType {
   return typeof value === 'string' && (ANGLE_TYPES as readonly string[]).includes(value)
+}
+
+export function isCopyType(value: unknown): value is CopyType {
+  return typeof value === 'string' && (COPY_TYPES as readonly string[]).includes(value)
 }
 
 export function isRiskLevel(value: unknown): value is RiskLevel {

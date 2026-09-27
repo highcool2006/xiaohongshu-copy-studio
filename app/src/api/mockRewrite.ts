@@ -10,6 +10,7 @@
 
 import type { Style } from '../../shared/enums'
 import type { GenerateResponse } from '../../shared/types'
+import { COPY_TYPE_DEFAULT } from '../../shared/enums'
 import { getMockGenerateResponse } from './mockGenerate'
 import { getMockScore } from './mockScore'
 import type { RewritePayload } from './rewrite'
@@ -50,7 +51,8 @@ export function getMockRewriteResponse(payload: RewritePayload): GenerateRespons
   const score = getMockScore({ title, body, style: targetStyle })
 
   // 借一份 Mock 的其它字段（ai_ness / compliance / cover_suggestion），保证结构与真实响应一致。
-  // 这里必须传**完整**的 GenerateInput（V2 起 content_directions_preference 为必填字段）。
+  // 这里必须传**完整**的 GenerateInput（V2 起 content_directions_preference 为必填字段；
+  // 文案类型为必填后同样要补齐——rewrite 本身不接收 copy_type，这里只是取 Mock 结构）。
   const base = getMockGenerateResponse({
     product: payload.product,
     selling_points: payload.selling_points,
@@ -59,6 +61,7 @@ export function getMockRewriteResponse(payload: RewritePayload): GenerateRespons
     target_users: [],
     scenarios: [],
     goal: '种草',
+    copy_type: COPY_TYPE_DEFAULT,
     content_directions_preference: [],
   }).notes[0]!
 

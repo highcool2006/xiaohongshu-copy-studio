@@ -8,8 +8,8 @@
  */
 
 import { COUNT_DEFAULT } from '../../shared/constants'
-import { sortStyles } from '../../shared/enums'
-import type { ContentDirection, ContentGoal, Style } from '../../shared/enums'
+import { COPY_TYPE_DEFAULT, sortStyles } from '../../shared/enums'
+import type { ContentDirection, ContentGoal, CopyType, Style } from '../../shared/enums'
 import { minCountForStyles } from '../../shared/validation'
 import { removeAsset, upsertAsset } from '../lib/assetsStorage'
 import type {
@@ -113,6 +113,8 @@ export interface AppState {
     targetUsers: string[]
     scenarios: string[]
     goal: ContentGoal
+    /** 文案类型（体裁，单选）；决定「讲什么、不讲什么」，与风格（怎么写）分层 */
+    copyType: CopyType
     /** 期望的内容方向；空数组表示不限定 */
     directions: ContentDirection[]
     styles: Style[]
@@ -171,6 +173,7 @@ export const initialAppState: AppState = {
     targetUsers: [],
     scenarios: [],
     goal: '种草',
+    copyType: COPY_TYPE_DEFAULT,
     directions: [],
     styles: [],
     count: COUNT_DEFAULT,
@@ -209,6 +212,7 @@ export type AppAction =
   | { type: 'TOGGLE_TARGET_USER'; value: string }
   | { type: 'TOGGLE_SCENARIO'; value: string }
   | { type: 'SET_GOAL'; value: ContentGoal }
+  | { type: 'SET_COPY_TYPE'; value: CopyType }
   | { type: 'TOGGLE_DIRECTION'; direction: ContentDirection }
   | { type: 'TOGGLE_STYLE'; style: Style }
   | { type: 'SET_COUNT'; value: number }
@@ -360,6 +364,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, profile: { ...state.profile, scenarios: toggleItem(state.profile.scenarios, action.value) } }
     case 'SET_GOAL':
       return { ...state, profile: { ...state.profile, goal: action.value } }
+    case 'SET_COPY_TYPE':
+      return { ...state, profile: { ...state.profile, copyType: action.value } }
     case 'TOGGLE_DIRECTION':
       return { ...state, profile: { ...state.profile, directions: toggleItem(state.profile.directions, action.direction) } }
 

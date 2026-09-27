@@ -12,7 +12,14 @@
  */
 
 import type { ErrorType, InformationStatus } from './constants.js'
-import type { AngleType, ContentDirection, ContentGoal, RiskLevel, Style } from './enums.js'
+import type {
+  AngleType,
+  ContentDirection,
+  ContentGoal,
+  CopyType,
+  RiskLevel,
+  Style,
+} from './enums.js'
 
 /* ---------- 评分（六维，总分 100） ---------- */
 
@@ -178,6 +185,8 @@ export interface GenerateRequest {
   target_users?: string[]
   scenarios?: string[]
   goal?: ContentGoal
+  /** 文案类型（体裁控制）；省略时使用 COPY_TYPE_DEFAULT */
+  copy_type?: CopyType
   reference_text?: string
   /** 期望的内容方向（可多选）；提供时 AI 应优先从中选择 */
   content_directions_preference?: ContentDirection[]
@@ -192,6 +201,8 @@ export interface GenerateInput {
   target_users: string[]
   scenarios: string[]
   goal: ContentGoal
+  /** 校验归一化后一定有值（缺省回落 COPY_TYPE_DEFAULT） */
+  copy_type: CopyType
   /** 空数组表示不限定方向，由 AI 自行规划 */
   content_directions_preference: ContentDirection[]
   product_category?: string
@@ -346,6 +357,7 @@ export type ErrorField =
   | 'target_users'
   | 'scenarios'
   | 'goal'
+  | 'copy_type'
   | 'reference_text'
   | 'target_style'
   | 'current_note'
